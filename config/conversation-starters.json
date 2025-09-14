@@ -1,0 +1,99 @@
+{
+  "$schema": "./conversation-starters.schema.json",
+  "version": 1,
+  "updated": "2025-09-14",
+  "generalFallback": [
+    {
+      "id": "themes",
+      "label": "Summarize Themes",
+      "prompt": "Summarize key themes across the most recent documents.",
+      "complexity": "Simple"
+    },
+    {
+      "id": "gaps",
+      "label": "Identify Gaps",
+      "prompt": "What gaps or missing details should I clarify next?",
+      "complexity": "Moderate"
+    }
+  ],
+  "sets": [
+    {
+      "agentIds": ["financial-services-agent"],
+      "starters": [
+        {
+          "id": "fees-simple",
+          "label": "Fees (Simple)",
+          "prompt": "What fees do I pay if I redeem shares of the Vanguard 500 Index Fund within 30 days?",
+          "complexity": "Simple",
+          "tags": ["filings"]
+        },
+        {
+          "id": "risk-compare",
+          "label": "Risk Comparison (Moderate)",
+          "prompt": "Compare the risks of investing in ETFs vs closed-end funds for a conservative investor.",
+          "complexity": "Moderate",
+          "tags": ["bulletins", "analysis"]
+        },
+        {
+          "id": "cross-source-risk-fees",
+          "label": "Cross-Source Risk & Fees (Advanced)",
+          "prompt": "Summarize the key risks and the expense ratio from a mutual fund fact sheet and explain how it differs from the 10-K risk disclosure.",
+          "complexity": "Advanced",
+          "tags": ["multi-source", "fact-sheet", "10-K"]
+        }
+      ]
+    },
+    {
+      "agentIds": ["healthcare-agent"],
+      "starters": [
+        {
+          "id": "contraindications",
+          "label": "Drug Contraindications (Simple)",
+          "prompt": "List contraindications for Albuterol tablets.",
+          "complexity": "Simple",
+          "tags": ["labels"]
+        },
+        {
+          "id": "sterilization",
+          "label": "Sterilization Protocol (Moderate)",
+          "prompt": "What is the CDC’s recommended sterilization process for reusable surgical instruments?",
+          "complexity": "Moderate",
+          "tags": ["guidelines"]
+        },
+        {
+          "id": "label-consistency",
+          "label": "Label Consistency (Advanced)",
+          "prompt": "Extract the dosage instructions from an FDA drug label and compare with the DailyMed version. Are they consistent?",
+          "complexity": "Advanced",
+          "tags": ["multi-source", "consistency"]
+        }
+      ]
+    },
+    {
+      "agentIds": ["manufacturing-agent"],
+      "starters": [
+        {
+          "id": "torque",
+          "label": "Torque Spec (Simple)",
+          "prompt": "What torque value is specified for assembly part 123 on the ZX-200 engine?",
+          "complexity": "Simple",
+          "tags": ["manuals"]
+        },
+        {
+          "id": "ads-list",
+          "label": "Airworthiness Directives (Moderate)",
+          "prompt": "List all Airworthiness Directives issued since 2020 for Embraer EMB-120 and summarize key compliance actions.",
+          "complexity": "Moderate",
+          "tags": ["directives", "compliance"]
+        },
+        {
+          "id": "directive-supersession",
+          "label": "Directive Supersession (Advanced)",
+          "prompt": "Identify an FAA Airworthiness Directive, determine if it has been superseded, and summarize the compliance steps.",
+          "complexity": "Advanced",
+          "tags": ["multi-source", "supersession"]
+        }
+      ]
+    }
+  ]
+}

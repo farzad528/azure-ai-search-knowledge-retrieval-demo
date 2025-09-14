@@ -13,6 +13,7 @@ import { ImageInput } from '@/components/ui/image-input'
 import { RuntimeSettingsPanel } from '@/components/runtime-settings-panel'
 import { ViewCodeModal } from '@/components/view-code-modal'
 import { fetchAgents, retrieveFromAgent } from '../lib/api'
+import { useConversationStarters } from '@/lib/conversationStarters'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils'
 
@@ -88,6 +89,8 @@ export function PlaygroundView() {
   const [selectedImage, setSelectedImage] = useState<string>('')
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [pendingQueue, setPendingQueue] = useState<string[]>([])
+  const [processing, setProcessing] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [runtimeSettingsOpen, setRuntimeSettingsOpen] = useState(false)
   const [showCodeModal, setShowCodeModal] = useState(false)
@@ -228,98 +231,37 @@ export function PlaygroundView() {
     }
   }, [messages, currentChatId, selectedAgent, chatHistory])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if ((!input.trim() && !selectedImage) || !selectedAgent || isLoading) return
-
-    // Build message content array
-    const messageContent: MessageContent[] = []
-    
-    if (input.trim()) {
-      messageContent.push({ type: 'text', text: input.trim() })
-    }
-    
-    if (selectedImage && selectedImageFile) {
-      messageContent.push({ 
-        type: 'image', 
-        image: { url: selectedImage, file: selectedImageFile } 
-      })
-    }
-
+  // Unified processing function
+  const processRequest = async (prompt: string) => {
+    if (!selectedAgent) return
+    const contentParts: MessageContent[] = prompt ? [{ type: 'text', text: prompt }] : []
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: messageContent,
+      content: contentParts,
       timestamp: new Date()
     }
-
     setMessages(prev => [...prev, userMessage])
-    setInput('')
-    setSelectedImage('')
-    setSelectedImageFile(null)
-    setIsLoading(true)
 
+    const convertContent = async (c: MessageContent) => {
+      if (c.type === 'text') return { type: 'text', text: c.text }
+      if (c.type === 'image') return { type: 'image', image: { url: c.image.url } }
+      return c as any
+    }
+    const azureMessages = [
+      ...await Promise.all(messages.map(async (m) => ({
+        role: m.role,
+        content: await Promise.all(m.content.map(convertContent))
+      }))),
+      { role: 'user', content: await Promise.all(contentParts.map(convertContent)) }
+    ]
     try {
-      // Convert images to base64 if present
-      const processedMessageContent = await Promise.all(
-        messageContent.map(async (c) => {
-          if (c.type === 'text') {
-            return { type: 'text', text: c.text }
-          } else if (c.image.file) {
-            // Convert file to base64
-            const base64 = await convertBlobToBase64(c.image.file)
-            return { type: 'image', image: { url: base64 } }
-          } else {
-            return { type: 'image', image: { url: c.image.url } }
-          }
-        })
-      )
-
-      // Convert messages to Azure AI Search retrieve format (clean format for API)
-      const azureMessages = [
-        ...await Promise.all(messages.map(async (m) => ({
-          role: m.role,
-          content: await Promise.all(m.content.map(async (c) => {
-            if (c.type === 'text') {
-              return { type: 'text', text: c.text }
-            } else if (c.type === 'image') {
-              return { type: 'image', image: { url: c.image.url } }
-            }
-            return c // fallback for any other content types
-          }))
-        }))),
-        {
-          role: 'user',
-          content: processedMessageContent
-        }
-      ]
-
-      // Build request body in Azure format
-      const requestBody = {
-        messages: azureMessages
-      }
-
-      // Add runtime settings if provided
-      if (runtimeSettings.knowledgeSourceParams && runtimeSettings.knowledgeSourceParams.length > 0) {
-        (requestBody as any).knowledgeSourceParams = runtimeSettings.knowledgeSourceParams
-      }
-
-      console.log('Sending retrieve request:', JSON.stringify(requestBody, null, 2))
-
       const response = await retrieveFromAgent(selectedAgent.id, azureMessages, runtimeSettings)
-
-      console.log('Received response:', response)
-
-      // Parse the actual Azure response structure
       let assistantText = 'I apologize, but I was unable to generate a response.'
-      
       if (response.response && response.response.length > 0) {
-        const responseContent = response.response[0].content
-        if (responseContent && responseContent.length > 0) {
-          assistantText = responseContent[0].text || assistantText
-        }
+        const rc = response.response[0].content
+        if (rc && rc.length > 0) assistantText = rc[0].text || assistantText
       }
-
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -328,20 +270,49 @@ export function PlaygroundView() {
         references: response.references || [],
         activity: response.activity || []
       }
-
       setMessages(prev => [...prev, assistantMessage])
-    } catch (error) {
+    } catch (err) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: [{ type: 'text', text: 'I apologize, but I encountered an error while processing your request. Please try again.' }],
+        content: [{ type: 'text', text: 'Error processing request. Please try again.' }],
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
-    } finally {
-      setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (pendingQueue.length === 0 || processing) return
+    let cancelled = false
+    const run = async () => {
+      setProcessing(true)
+      setIsLoading(true)
+      while (pendingQueue.length > 0 && !cancelled) {
+        const [next, ...rest] = pendingQueue
+        setPendingQueue(rest)
+        await processRequest(next)
+      }
+      setIsLoading(false)
+      setProcessing(false)
+    }
+    run()
+    return () => { cancelled = true }
+  }, [pendingQueue, processing, selectedAgent])
+
+  const enqueuePrompt = (prompt: string) => {
+    if (!prompt.trim()) return
+    setPendingQueue(prev => [...prev, prompt.trim()])
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || !selectedAgent) return
+    enqueuePrompt(input)
+    setInput('')
+  }
+
+  const sendPrompt = (prompt: string) => enqueuePrompt(prompt)
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -388,6 +359,10 @@ export function PlaygroundView() {
       </div>
     )
   }
+
+  // Reusable hook for conversation starters
+  const { starters, isGeneralFallback: isGeneral } = useConversationStarters(selectedAgent?.id)
+
 
   return (
     <div className="h-[calc(100vh-6rem)] flex">
@@ -492,75 +467,65 @@ export function PlaygroundView() {
                 <Bot20Regular className="h-8 w-8 text-accent" />
               </div>
               <h3 className="text-lg font-semibold mb-2">Start a conversation</h3>
-              <p className="text-fg-muted max-w-md mx-auto mb-8">
-                Ask me anything about your knowledge sources. I can search, analyze, and provide insights based on your data.
+              <p className="text-fg-muted max-w-md mx-auto mb-3">
+                {isGeneral
+                  ? 'General suggestions'
+                  : 'Ask me anything about your domain. These starters illustrate increasing complexity.'}
               </p>
-              
-              {/* Conversation Starters */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-                <Card 
-                  className="cursor-pointer hover:elevation-sm hover:scale-105 transition-all duration-fast bg-bg-card border border-stroke-divider active:scale-95"
-                  onClick={() => {
-                    setInput("What are the key insights from the latest reports?")
-                    setTimeout(() => textareaRef.current?.focus(), 100)
-                  }}
-                >
-                  <CardContent className="p-4">
-                    <div className="text-sm font-medium mb-2">📊 Analyze Reports</div>
-                    <p className="text-xs text-fg-muted text-left">What are the key insights from the latest reports?</p>
-                  </CardContent>
-                </Card>
-                
-                <Card 
-                  className="cursor-pointer hover:elevation-sm hover:scale-105 transition-all duration-fast bg-bg-card border border-stroke-divider active:scale-95"
-                  onClick={() => {
-                    setInput("Compare performance metrics across different time periods")
-                    setTimeout(() => textareaRef.current?.focus(), 100)
-                  }}
-                >
-                  <CardContent className="p-4">
-                    <div className="text-sm font-medium mb-2">📈 Compare Metrics</div>
-                    <p className="text-xs text-fg-muted text-left">Compare performance metrics across different time periods</p>
-                  </CardContent>
-                </Card>
-                
-                <Card 
-                  className="cursor-pointer hover:elevation-sm hover:scale-105 transition-all duration-fast bg-bg-card border border-stroke-divider active:scale-95"
-                  onClick={() => {
-                    setInput("What do you see in this image?");
-                    // Create a sample image blob for demonstration
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 200;
-                    canvas.height = 150;
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
-                      ctx.fillStyle = '#f0f0f0';
-                      ctx.fillRect(0, 0, 200, 150);
-                      ctx.fillStyle = '#666';
-                      ctx.font = '14px Arial';
-                      ctx.textAlign = 'center';
-                      ctx.fillText('Sample Chart', 100, 75);
-                      ctx.fillText('📊', 100, 95);
-                    }
-                    canvas.toBlob((blob) => {
-                      if (blob) {
-                        const file = new File([blob], 'sample-chart.png', { type: 'image/png' });
-                        const url = URL.createObjectURL(blob);
-                        handleImageSelect(url, file);
-                        textareaRef.current?.focus();
-                      }
-                    });
-                  }}
-                >
-                  <CardContent className="p-4">
-                    <div className="text-sm font-medium mb-2">🖼️ Analyze Image</div>
-                    <p className="text-xs text-fg-muted text-left">What do you see in this image?</p>
-                    <div className="mt-2 p-2 bg-bg-subtle rounded text-xs text-fg-muted">
-                      Includes sample image
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              {/* Complexity helper text removed */}
+
+              {/* Dynamic Conversation Starters */}
+              {isGeneral ? (
+                <div className="max-w-xl mx-auto mt-6">
+                  <Card className="bg-bg-subtle border-dashed border-stroke-divider">
+                    <CardContent className="p-6 text-left">
+                      <div className="text-sm font-medium mb-2">No domain-specific starters yet</div>
+                      <p className="text-xs text-fg-muted mb-4">Create or configure a knowledge agent with domain sources to see tailored prompts here.</p>
+                      <div className="space-y-2">
+                        {["Summarize key themes across the most recent documents.", "What gaps or missing details should I clarify next?"].map((g, i) => (
+                          <button
+                            key={i}
+                            onClick={() => sendPrompt(g)}
+                            disabled={isLoading}
+                            className="w-full text-left p-3 rounded-md bg-bg-card hover:bg-bg-hover transition text-xs border border-stroke-divider disabled:opacity-60"
+                          >{g}</button>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+                  {starters.map((s, idx) => {
+                    const isFirstActive = idx === 0 && isLoading
+                    return (
+                      <Card
+                        key={idx}
+                        className={cn('relative cursor-pointer hover:elevation-sm hover:scale-105 transition-all duration-150 bg-bg-card border border-stroke-divider active:scale-95', isFirstActive && 'opacity-75')}
+                        onClick={() => sendPrompt(s.prompt)}
+                      >
+                        {isFirstActive && (
+                          <div className="absolute inset-0 overflow-hidden rounded-md pointer-events-none">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-bg-subtle/70 to-transparent animate-pulse" />
+                            <div className="absolute bottom-1 right-2 text-[10px] font-medium text-fg-muted">Running…</div>
+                          </div>
+                        )}
+                        {pendingQueue.length > 0 && idx === 0 && !isLoading && (
+                          <div className="absolute top-1 right-2 text-[10px] px-1.5 py-0.5 rounded bg-accent-subtle text-accent">Queued: {pendingQueue.length}</div>
+                        )}
+                        <CardContent className="p-4 text-left space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="text-[11px] uppercase tracking-wide text-fg-muted font-medium">{s.complexity}</div>
+                            {s.complexity === 'Advanced' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-subtle text-accent">Multi-source</span>}
+                          </div>
+                          <div className="text-sm font-medium leading-snug">{s.label}</div>
+                          <p className="text-xs text-fg-muted leading-snug">{s.prompt}</p>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           ) : (
             messages.map((message) => (
