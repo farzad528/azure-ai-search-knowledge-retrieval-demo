@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light mode colors */
+    --color-bg-canvas: 0, 0%, 98%;
+    --color-bg-subtle: 210, 20%, 96%;
+    --color-bg-card: 0, 0%, 100%;
+    --color-bg-hover: 210, 20%, 94%;
+    --color-bg-pressed: 210, 20%, 92%;
+
+    --color-fg-default: 220, 9%, 13%;
+    --color-fg-muted: 220, 9%, 46%;
+    --color-fg-subtle: 220, 9%, 65%;
+    --color-fg-on-accent: 0, 0%, 100%;
+
+    --color-accent-default: 221, 83%, 53%;
+    --color-accent-hover: 221, 83%, 48%;
+    --color-accent-pressed: 221, 83%, 43%;
+    --color-accent-subtle: 221, 60%, 95%;
+    --color-accent-muted: 221, 60%, 88%;
+
+    --color-stroke-divider: 220, 13%, 91%;
+    --color-stroke-strong: 220, 13%, 82%;
+    --color-stroke-focus: 221, 83%, 53%;
+
+    --color-status-success: 142, 76%, 36%;
+    --color-status-warning: 38, 92%, 50%;
+    --color-status-danger: 0, 84%, 60%;
+    --color-status-info: 221, 83%, 53%;
+  }
+
+  .dark {
+    /* Dark mode colors */
+    --color-bg-canvas: 220, 13%, 9%;
+    --color-bg-subtle: 220, 13%, 15%;
+    --color-bg-card: 220, 13%, 13%;
+    --color-bg-hover: 220, 13%, 18%;
+    --color-bg-pressed: 220, 13%, 21%;
+
+    --color-fg-default: 0, 0%, 95%;
+    --color-fg-muted: 220, 9%, 65%;
+    --color-fg-subtle: 220, 9%, 46%;
+    --color-fg-on-accent: 0, 0%, 100%;
+
+    --color-accent-default: 221, 83%, 60%;
+    --color-accent-hover: 221, 83%, 65%;
+    --color-accent-pressed: 221, 83%, 70%;
+    --color-accent-subtle: 221, 60%, 20%;
+    --color-accent-muted: 221, 60%, 25%;
+
+    --color-stroke-divider: 220, 13%, 20%;
+    --color-stroke-strong: 220, 13%, 28%;
+    --color-stroke-focus: 221, 83%, 60%;
+
+    --color-status-success: 142, 76%, 50%;
+    --color-status-warning: 38, 92%, 60%;
+    --color-status-danger: 0, 84%, 70%;
+    --color-status-info: 221, 83%, 60%;
+  }
+
+  * {
+    @apply border-stroke-divider;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-bg-canvas text-fg-default font-sans antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  /* Focus outline */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-stroke-focus;
+  }
+
+  /* Reduce motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Loading spinner with Fluent design */
+  .spinner {
+    @apply animate-spin rounded-full h-4 w-4 border-2 border-stroke-divider border-t-accent;
+  }
+
+  /* Text truncation utility */
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+@layer utilities {
+  /* Gentle animations */
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slide-in {
+    animation: slideIn 200ms ease-out;
+  }
+
+  /* Elevation utilities */
+  .elevation-sm {
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+
+  .elevation-md {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+
+  .elevation-lg {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+}
