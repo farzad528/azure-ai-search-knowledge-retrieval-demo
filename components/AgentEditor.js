@@ -10,7 +10,8 @@ export default function AgentEditor({ agent, onClose, onSuccess }) {
     models: [{
       kind: 'azureOpenAI',
       azureOpenAIParameters: {
-        resourceUri: process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT || 'https://fsunavala-openai-swecen.openai.azure.com',
+        // Endpoint must be provided via environment variable; no hard-coded fallback to avoid leaking resource naming.
+        resourceUri: process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT || '',
         deploymentId: 'gpt-4o-mini',
         modelName: 'gpt-4o-mini'
       }
