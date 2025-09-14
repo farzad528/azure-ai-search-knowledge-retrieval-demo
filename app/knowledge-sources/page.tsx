@@ -68,7 +68,7 @@ export default function KnowledgeSourcesPage() {
     <div className="space-y-8">
       <PageHeader
         title="Knowledge sources"
-        description="Manage search indexes and data sources for knowledge retrieval."
+        description="Unified indexes and repositories optimized for high-quality agent grounding."
         primaryAction={{
           label: "Connect source",
           onClick: () => console.log('Connect source clicked'),

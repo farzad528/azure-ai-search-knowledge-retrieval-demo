@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Send20Regular, Attach20Regular, Settings20Regular, Bot20Regular, Person20Regular, ChevronDown20Regular, ChevronUp20Regular, Options20Regular, Code20Regular, Dismiss20Regular } from '@fluentui/react-icons'
+import { AgentAvatar } from '@/components/agent-avatar'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,6 +13,10 @@ import { VoiceInput } from '@/components/ui/voice-input'
 import { ImageInput } from '@/components/ui/image-input'
 import { RuntimeSettingsPanel } from '@/components/runtime-settings-panel'
 import { ViewCodeModal } from '@/components/view-code-modal'
+import { DocumentViewerModal } from '@/components/document-viewer-modal'
+import { SourceKindIcon } from '@/components/source-kind-icon'
+import { aggregateKinds, SourceKind } from '@/lib/sourceKinds'
+import { Tooltip } from '@/components/ui/tooltip'
 import { fetchAgents, retrieveFromAgent } from '../lib/api'
 import { useConversationStarters } from '@/lib/conversationStarters'
 import { cn } from '@/lib/utils'
@@ -46,6 +51,7 @@ type Reference = {
   sourceData?: any
   rerankerScore?: number
   docKey?: string
+  blobUrl?: string
 }
 
 type Activity = {
@@ -97,6 +103,7 @@ export function PlaygroundView() {
   const [runtimeSettings, setRuntimeSettings] = useState({
     knowledgeSourceParams: []
   })
+  const [docViewerUrl, setDocViewerUrl] = useState<string | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -420,13 +427,24 @@ export function PlaygroundView() {
         <div className="border-b border-stroke-divider p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-accent-subtle">
-                <Bot20Regular className="h-5 w-5 text-accent" />
-              </div>
+              <AgentAvatar size={44} iconSize={22} variant="subtle" title={selectedAgent.name} />
               <div>
                 <h1 className="font-semibold text-xl">{selectedAgent.name}</h1>
-                <p className="text-sm text-fg-muted">
-                  {selectedAgent.model || 'Default model'} • {selectedAgent.sources.length} knowledge sources
+                <p className="text-sm text-fg-muted flex items-center gap-3 flex-wrap">
+                  <span>{selectedAgent.model || 'Default model'}</span>
+                  <span className="text-fg-muted">•</span>
+                  <span>{selectedAgent.sources.length} source{selectedAgent.sources.length !== 1 && 's'}</span>
+                  {selectedAgent && (selectedAgent as any).sourceDetails && (
+                    <span className="flex items-center gap-1 ml-1">
+                      {Object.entries(aggregateKinds((selectedAgent as any).sourceDetails))
+                        .filter(([_, count]) => count > 0)
+                        .map(([kind, count]) => (
+                          <Tooltip key={kind} content={`${count} ${kind} source${count>1?'s':''}`}>
+                            <SourceKindIcon kind={kind as SourceKind} size={16} boxSize={30} />
+                          </Tooltip>
+                        ))}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -463,8 +481,8 @@ export function PlaygroundView() {
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.length === 0 ? (
             <div className="text-center py-12">
-              <div className="p-4 rounded-full bg-accent-subtle inline-block mb-6">
-                <Bot20Regular className="h-8 w-8 text-accent" />
+              <div className="inline-block mb-6">
+                <AgentAvatar size={64} iconSize={32} variant="subtle" title={selectedAgent.name} />
               </div>
               <h3 className="text-lg font-semibold mb-2">Start a conversation</h3>
               <p className="text-fg-muted max-w-md mx-auto mb-3">
@@ -529,7 +547,7 @@ export function PlaygroundView() {
             </div>
           ) : (
             messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
+              <MessageBubble key={message.id} message={message} onOpenDocument={(url) => setDocViewerUrl(url)} />
             ))
           )}
           
@@ -667,11 +685,15 @@ export function PlaygroundView() {
         agentName={selectedAgent.name}
         messages={messages}
       />
+      <DocumentViewerModal
+        url={docViewerUrl}
+        onClose={() => setDocViewerUrl(null)}
+      />
     </div>
   )
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({ message, onOpenDocument }: { message: Message, onOpenDocument?: (url: string) => void }) {
   const [expanded, setExpanded] = useState(false)
   const isUser = message.role === 'user'
 
@@ -750,17 +772,38 @@ function MessageBubble({ message }: { message: Message }) {
                     {message.references && message.references.length > 0 && (
                       <div className="space-y-2">
                         <h6 className="text-xs font-medium text-fg-muted uppercase tracking-wide">References</h6>
-                        {message.references.map((ref) => (
-                          <div key={ref.id} className="p-3 bg-bg-subtle rounded-md">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-accent">{ref.type}</span>
-                              {ref.rerankerScore && (
-                                <span className="text-xs text-fg-muted">Score: {ref.rerankerScore.toFixed(2)}</span>
-                              )}
+                        {Array.from(new Map(message.references.map(r => [r.blobUrl || r.id, r])).values()).map((ref) => {
+                          const fileName = ref.blobUrl ? decodeURIComponent(ref.blobUrl.split('/').pop() || ref.id) : (ref.docKey || ref.id)
+                          return (
+                            <div key={ref.id + (ref.blobUrl || '')} className="p-3 bg-bg-subtle rounded-md group">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="flex items-center gap-1 text-xs font-medium text-accent">
+                                  <SourceKindIcon kind={ref.type} size={14} variant="plain" />
+                                  {ref.type}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  {ref.rerankerScore && (
+                                    <span className="text-xs text-fg-muted">{ref.rerankerScore.toFixed(2)}</span>
+                                  )}
+                                  {ref.blobUrl && onOpenDocument && (
+                                    <button
+                                      onClick={() => onOpenDocument(ref.blobUrl!)}
+                                      className="text-[10px] px-2 py-0.5 rounded bg-accent-subtle text-accent hover:bg-accent/20 transition"
+                                    >Open</button>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-xs text-fg-muted break-all"><span className="font-medium">{fileName}</span>{ref.blobUrl && ' • '} {ref.blobUrl && (
+                                <a
+                                  href={ref.blobUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="underline text-accent hover:text-accent/80"
+                                >download</a>
+                              )}</p>
                             </div>
-                            <p className="text-xs text-fg-muted">Document: {ref.docKey || ref.id}</p>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                     

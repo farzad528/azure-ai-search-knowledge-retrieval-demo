@@ -1,63 +1,72 @@
-# Azure AI Search Knowledge Retrieval Demo
+## Azure AI Search – Knowledge Retrieval Demo
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/farzad528/azure-ai-search-knowledge-retrieval-demo)
-[![Dev Containers](https://img.shields.io/badge/Dev%20Container-Open%20in%20VS%20Code-blue?logo=visualstudiocode&logoColor=white)](https://code.visualstudio.com/docs/devcontainers/containers)
+Minimal Next.js (App Router) UI to explore Azure AI Search knowledge sources and agents, then test grounded retrieval in a chat playground. 
 
-A minimal Next.js UI to explore Azure AI Search "knowledge agents" and retrieval with your own data. You supply your Azure AI Search endpoint & key plus (optionally) Azure OpenAI endpoint & key; then create Knowledge Sources and Agents, and test retrieval in the playground.
+### 1. What It Does
+* Connect to your Azure AI Search service.
+* Register "knowledge sources" (search index, blob, web).
+* Create "knowledge agents" that orchestrate multi‑source retrieval.
+* Chat in the Playground with citations & activity details.
 
-## 1. Setup
-Prerequisites:
-- Node.js 18+ (LTS recommended)
-- An Azure AI Search service (endpoint + admin/query key)
-- Azure OpenAI resource (endpoint + key) for creating a new knowledge agent
+### 2. Requirements
+| Tool / Service | Purpose |
+| -------------- | ------- |
+| Node.js 18+    | Run/build the Next.js app |
+| Azure AI Search| Index & retrieval backend |
+| Azure OpenAI (optional) | Model inference for agents |
 
-Install & configure:
-```bash
-pnpm install   # or npm install / yarn install
-cp .env.example .env.local  # then edit values
-pnpm dev       # or npm run dev
-```
-
-## 2. Environment Variables
-Add these to `.env.local` (never commit real values):
+### 3. Environment Variables (`.env.local`)
 ```bash
 AZURE_SEARCH_ENDPOINT=https://<your-search>.search.windows.net
-AZURE_SEARCH_API_KEY=<your-search-key>
+AZURE_SEARCH_API_KEY=<admin-or-query-key>
 AZURE_SEARCH_API_VERSION=2025-08-01-preview
-NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT=https://<your-openai>.openai.azure.com   # optional
-AZURE_OPENAI_API_KEY=<your-openai-key>                                    # optional (server-side only)
+
+# Optional (used when creating knowledge agents in this app)
+NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT=https://<your-openai>.openai.azure.com
+AZURE_OPENAI_API_KEY=<openai-key>
 ```
 Notes:
-- Only expose values with `NEXT_PUBLIC_` if safe for the client (endpoints are fine; keys are not).
-- Do NOT prefix secret keys with `NEXT_PUBLIC_`.
+* Only endpoints may be exposed with `NEXT_PUBLIC_`. Never expose keys.
+* If OpenAI vars are omitted you can still manage sources; model features will be limited.
 
-## 3. Bring Your Own Data
-1. Start the app and open `http://localhost:3000`.
-2. Create Knowledge Sources (e.g., pointing to your search index or other supported types). No keys are stored in code—calls use your env vars.
-3. Create a Knowledge Agent: pick model (Azure OpenAI) and select sources.
-4. Use the Playground to send messages; view generated code snippets (replace placeholders with your env values if copying externally).
-
-## 4. Run & Next Steps
-Run dev:
+### 4. Quick Start
 ```bash
-pnpm dev
+cp .env.example .env.local  # fill in values
+npm install                 # or pnpm install / yarn
+npm run dev                 # http://localhost:3000
 ```
-Build & start production:
-```bash
-pnpm build
-pnpm start
-```
-Next ideas: add authentication, connect additional source types, or deploy (e.g., Azure Static Web Apps + managed API). Keep `.env.local` out of git.
+Then:
+1. Add knowledge sources.
+2. Create an agent (select sources + model).
+3. Open Playground → ask a question → inspect citations.
 
-Security: No API keys are hardcoded in this repository. All sensitive values must come from your environment.
+### 5. Production Build
+```bash
+npm run build
+npm start
+```
+Outputs to `.next` with dynamic routes for retrieval APIs.
+
+### 6. Deployment (Outline)
+You can deploy to Azure (App Service, Static Web Apps + API, or Container Apps) or Vercel. Ensure env vars are set in the hosting platform and never commit secrets. A container-based deployment only needs: `npm ci && npm run build` then `npm start`.
+
+### 7. Security & Privacy
+* No secrets are hardcoded; all keys must come from env vars.
+* Avoid putting PII in logs (currently only minimal console logging).
+* Remove any unused demo data before production.
+
+### 8. Troubleshooting
+| Issue | Fix |
+|-------|-----|
+| Build shows `DYNAMIC_SERVER_USAGE` warnings | Occurs during prerender when live Search calls run; set `export const dynamic = 'force-dynamic'` on pages needing server evaluation or convert to client fetch on mount. |
+| `403` / `401` from Search APIs | Verify `AZURE_SEARCH_API_KEY` and allowed network rules. |
+| No agents returned | Ensure API version matches existing service preview features. |
+| Chat not responding | Open dev tools, check `/api/agents/[id]/retrieve` response. |
+
+### 9. Housekeeping
+* Keep `.env.local` out of source control.
+* Run `npm audit --production` periodically (currently: 0 vulnerabilities).
+* Remove placeholder / unused assets as desired.
 
 ---
-Minimal by design—extend as needed.
-
-### Dev Container / Codespaces
-You can launch this repo instantly in a cloud dev environment via **GitHub Codespaces** or locally in VS Code using **Dev Containers**. The provided `.devcontainer/devcontainer.json` sets up Node 20 and recommended extensions. After opening:
-```bash
-npm install
-npm run dev
-```
-Add your `.env.local` values first (Codespaces secret store recommended for keys).
+Minimal by design. Extend with auth, analytics, caching, or infra-as-code as your next step.

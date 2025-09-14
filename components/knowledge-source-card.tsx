@@ -1,10 +1,11 @@
 import * as React from 'react'
-import { Database20Regular, Globe20Regular, FolderOpen20Regular, Open20Regular } from '@fluentui/react-icons'
+import { Open20Regular } from '@fluentui/react-icons'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils'
 import Link from 'next/link'
+import { SourceKindIcon } from '@/components/source-kind-icon'
 
 type KnowledgeSource = {
   id: string
@@ -20,21 +21,9 @@ interface KnowledgeSourceCardProps {
 }
 
 const kindConfig = {
-  searchIndex: {
-    icon: Database20Regular,
-    label: 'Search Index',
-    color: 'text-accent'
-  },
-  web: {
-    icon: Globe20Regular,
-    label: 'Web',
-    color: 'text-status-info'
-  },
-  azureBlob: {
-    icon: FolderOpen20Regular,
-    label: 'Azure Blob',
-    color: 'text-status-success'
-  }
+  searchIndex: { label: 'Search Index', color: 'text-accent' },
+  web: { label: 'Web', color: 'text-status-info' },
+  azureBlob: { label: 'Azure Blob', color: 'text-status-success' }
 }
 
 const statusConfig = {
@@ -46,7 +35,6 @@ const statusConfig = {
 
 export function KnowledgeSourceCard({ source }: KnowledgeSourceCardProps) {
   const config = kindConfig[source.kind]
-  const Icon = config.icon
   const status = statusConfig[source.status as keyof typeof statusConfig] || statusConfig.active
 
   return (
@@ -54,15 +42,13 @@ export function KnowledgeSourceCard({ source }: KnowledgeSourceCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className={cn('p-2 rounded-md bg-bg-subtle', config.color)}>
-              <Icon className="h-4 w-4" />
-            </div>
+            <SourceKindIcon kind={source.kind} size={18} boxSize={32} />
             <div className="min-w-0 flex-1">
               <h3 className="font-medium text-fg-default truncate">
                 {source.name}
               </h3>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-fg-muted">
+                <span className="text-sm text-fg-muted flex items-center gap-1">
                   {config.label}
                 </span>
                 <span
@@ -90,14 +76,6 @@ export function KnowledgeSourceCard({ source }: KnowledgeSourceCardProps) {
       <CardContent className="pt-0">
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
-            {source.docCount !== undefined && (
-              <div>
-                <span className="font-medium text-fg-default">
-                  {source.docCount.toLocaleString()}
-                </span>
-                <span className="text-fg-muted ml-1">documents</span>
-              </div>
-            )}
             {source.lastUpdated && (
               <div className="text-fg-muted">
                 Updated {formatRelativeTime(source.lastUpdated)}

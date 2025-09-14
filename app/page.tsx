@@ -1,96 +1,57 @@
-'use client'
+import { DashboardContainer } from '../components/dashboard-container'
 
-import { useState, useEffect } from 'react'
-import { fetchKnowledgeSources, fetchAgents } from '../lib/api'
-import { DashboardView } from '@/components/dashboard-view'
-
-type KnowledgeSource = {
-  id: string
-  name: string
-  kind: 'searchIndex' | 'web' | 'azureBlob'
-  docCount?: number
-  lastUpdated?: string
-  status?: string
+async function fetchAzure(path: string) {
+  const endpoint = process.env.AZURE_SEARCH_ENDPOINT
+  const apiVersion = process.env.AZURE_SEARCH_API_VERSION
+  const key = process.env.AZURE_SEARCH_API_KEY
+  if (!endpoint || !apiVersion || !key) {
+    throw new Error('Azure Search environment variables are not fully configured')
+  }
+  const res = await fetch(`${endpoint}${path}?api-version=${apiVersion}` , {
+    headers: { 'api-key': key, 'Cache-Control': 'no-cache' },
+    cache: 'no-store'
+  })
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${path}: ${res.status}`)
+  }
+  return res.json()
 }
 
-type KnowledgeAgent = {
-  id: string
-  name: string
-  model?: string
-  sources: string[]
-  status?: string
-  lastRun?: string
-  createdBy?: string
-}
+export default async function HomePage() {
+  let initialSources: any[] = []
+  let initialAgents: any[] = []
+  let initialError: string | null = null
+  try {
+    const [ksRaw, agentsRaw] = await Promise.all([
+      fetchAzure('/knowledgeSources'),
+      fetchAzure('/agents')
+    ])
 
-export default function HomePage() {
-  const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([])
-  const [agents, setAgents] = useState<KnowledgeAgent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const loadData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const [ksData, agentsData] = await Promise.all([
-        fetchKnowledgeSources(),
-        fetchAgents()
-      ])
-      
-      console.log('Knowledge sources data:', ksData)
-      console.log('Agents data:', agentsData)
-      
-      // Map knowledge sources with proper structure from actual Azure API
-      const mappedSources = (ksData.value || []).map(source => ({
-        id: source.name,
-        name: source.name,
-        kind: source.kind,
-        docCount: 0, // Not provided in current API response
-        lastUpdated: null, // Not provided in current API response  
-        status: 'active',
-        description: source.description
-      }))
-      
-      // Map agents with proper structure from actual Azure API
-      const mappedAgents = (agentsData.value || []).map(agent => {
-        const mapped = {
-          id: agent.name,
-          name: agent.name,
-          model: agent.models?.[0]?.azureOpenAIParameters?.modelName,
-          sources: (agent.knowledgeSources || []).map(ks => ks.name),
-          status: 'active',
-          lastRun: null, // Not provided in current API response
-          createdBy: null, // Not provided in current API response
-          description: agent.description,
-          outputConfiguration: agent.outputConfiguration
-        }
-        console.log('Mapping agent:', agent.name, '=> mapped ID:', mapped.id)
-        return mapped
-      })
-      
-      setKnowledgeSources(mappedSources)
-      setAgents(mappedAgents)
-    } catch (err) {
-      console.error('Error loading data:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load data')
-    } finally {
-      setLoading(false)
-    }
+    initialSources = (ksRaw.value || []).map((source: any) => ({
+      id: source.name,
+      name: source.name,
+      kind: source.kind,
+      docCount: 0,
+      lastUpdated: null,
+      status: 'active',
+      description: source.description
+    }))
+    initialAgents = (agentsRaw.value || []).map((agent: any) => ({
+      id: agent.name,
+      name: agent.name,
+      model: agent.models?.[0]?.azureOpenAIParameters?.modelName,
+      sources: (agent.knowledgeSources || []).map((ks: any) => ks.name),
+      sourceDetails: (agent.knowledgeSources || []).map((ks: any) => ({ name: ks.name, kind: ks.kind })),
+      status: 'active',
+      lastRun: null,
+      createdBy: null,
+      description: agent.description,
+      outputConfiguration: agent.outputConfiguration
+    }))
+  } catch (e: any) {
+    console.error('SSR dashboard fetch failed:', e)
+    initialError = e?.message || 'Failed to load dashboard data'
   }
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  return (
-    <DashboardView
-      knowledgeSources={knowledgeSources}
-      agents={agents}
-      loading={loading}
-      error={error}
-      onRefresh={loadData}
-    />
-  )
+  return <DashboardContainer initialAgents={initialAgents} initialKnowledgeSources={initialSources} initialError={initialError} />
 }

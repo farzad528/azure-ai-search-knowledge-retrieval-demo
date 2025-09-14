@@ -90,7 +90,7 @@ export function DashboardView({
             <CardContent>
               <div className="text-2xl font-bold">{knowledgeSources.length}</div>
               <p className="text-xs text-fg-muted">
-                Active search indexes and data sources
+                Active indexes & data sources
               </p>
             </CardContent>
           </Card>
@@ -106,7 +106,7 @@ export function DashboardView({
             <CardContent>
               <div className="text-2xl font-bold">{agents.length}</div>
               <p className="text-xs text-fg-muted">
-                Configured chat agents
+                Orchestrating retrieval
               </p>
             </CardContent>
           </Card>
@@ -121,7 +121,7 @@ export function DashboardView({
             <div>
               <h2 className="text-xl font-semibold">Knowledge agents</h2>
               <p className="text-sm text-fg-muted mt-1">
-                Chat agents configured with knowledge sources
+                Purpose-built agents that orchestrate grounded retrieval across your enterprise knowledge.
               </p>
             </div>
             <div className="flex gap-2">
@@ -172,7 +172,7 @@ export function DashboardView({
             <div>
               <h2 className="text-xl font-semibold">Knowledge sources</h2>
               <p className="text-sm text-fg-muted mt-1">
-                Connected search indexes and data sources
+                Unified indexes and repositories optimized for high-quality agent grounding.
               </p>
             </div>
           </div>

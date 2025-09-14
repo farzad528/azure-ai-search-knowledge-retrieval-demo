@@ -1,16 +1,21 @@
 import * as React from 'react'
 import { Bot20Regular, Play20Regular, Settings20Regular, MoreHorizontal20Regular } from '@fluentui/react-icons'
+import { AgentAvatar } from '@/components/agent-avatar'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils'
 import Link from 'next/link'
+import { SourceKindIcon } from '@/components/source-kind-icon'
+import { aggregateKinds, SourceKind } from '@/lib/sourceKinds'
+import { Tooltip } from '@/components/ui/tooltip'
 
 type KnowledgeAgent = {
   id: string
   name: string
   model?: string
   sources: string[]
+  sourceDetails?: { name: string; kind: string }[]
   status?: string
   lastRun?: string
   createdBy?: string
@@ -42,9 +47,7 @@ export function KnowledgeAgentCard({ agent }: KnowledgeAgentCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="p-2 rounded-md bg-accent-subtle">
-              <Bot20Regular className="h-4 w-4 text-accent" />
-            </div>
+            <AgentAvatar size={40} iconSize={20} variant="subtle" title={agent.name} />
             <div className="min-w-0 flex-1">
               <h3 className="font-medium text-fg-default truncate">
                 {agent.name}
@@ -64,6 +67,17 @@ export function KnowledgeAgentCard({ agent }: KnowledgeAgentCardProps) {
                 <span className="text-xs text-fg-muted">
                   {status.label}
                 </span>
+                {agent.sourceDetails && agent.sourceDetails.length > 0 && (
+                  <div className="flex items-center gap-1 ml-2">
+                    {Object.entries(aggregateKinds(agent.sourceDetails as any))
+                      .filter(([_, count]) => count > 0)
+                      .map(([kind, count]) => (
+                        <Tooltip key={kind} content={`${count} ${kind} source${count>1?'s':''}`}>
+                          <SourceKindIcon kind={kind as SourceKind} size={16} boxSize={28} />
+                        </Tooltip>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -89,14 +103,13 @@ export function KnowledgeAgentCard({ agent }: KnowledgeAgentCardProps) {
           <div>
             <div className="text-xs text-fg-muted mb-2">Knowledge sources</div>
             <div className="flex flex-wrap gap-1">
-              {agent.sources.slice(0, 3).map((source, index) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center px-2 py-1 rounded-pill bg-bg-subtle text-xs font-medium text-fg-muted"
-                >
-                  {source}
-                </span>
-              ))}
+              {(agent.sourceDetails ? agent.sourceDetails.map(sd => ({ name: sd.name, kind: sd.kind })) : agent.sources.map(n => ({ name: n, kind: 'searchIndex' })))
+                .slice(0,3)
+                .map((sd, index) => (
+                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 rounded-pill bg-bg-subtle text-xs font-medium text-fg-muted">
+                    <SourceKindIcon kind={sd.kind} size={14} boxSize={22} variant="plain" /> {sd.name}
+                  </span>
+                ))}
               {agent.sources.length > 3 && (
                 <span className="inline-flex items-center px-2 py-1 rounded-pill bg-bg-subtle text-xs font-medium text-fg-muted">
                   +{agent.sources.length - 3} more

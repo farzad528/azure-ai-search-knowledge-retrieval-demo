@@ -4,7 +4,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { ToastProvider } from '@/components/ui/toast'
 
 export const metadata = {
-  title: 'Azure AI Search Knowledge Retrieval',
+  title: 'Azure AI Search - Knowledge Retrieval Demo',
   description: 'Knowledge retrieval and agent playground powered by Azure AI Search',
 }
 

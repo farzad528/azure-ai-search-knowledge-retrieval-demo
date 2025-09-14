@@ -82,7 +82,7 @@ export default function KnowledgeAgentsPage() {
     <div className="space-y-8">
       <PageHeader
         title="Knowledge agents"
-        description="Manage chat agents configured with knowledge sources and AI models."
+        description="Purpose-built agents that orchestrate grounded retrieval across your enterprise knowledge."
         primaryAction={{
           label: "Create agent",
           onClick: () => setShowCreateAgent(true),
