@@ -1,3 +1,5 @@
+import { InlineCitationsText } from './inline-citations'
+
 export default function MessageBubble({ message }) {
   const isUser = message.role === 'user'
   
@@ -22,6 +24,9 @@ export default function MessageBubble({ message }) {
     }
   }
 
+  // Inline citation chip renderer similar to playground-view implementation
+  // Inline citations now handled by shared component
+
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`max-w-3xl p-4 rounded-lg ${
@@ -41,7 +46,15 @@ export default function MessageBubble({ message }) {
           </div>
         )}
         
-        <div className="whitespace-pre-wrap">{text}</div>
+        <div className="whitespace-pre-wrap">
+          <InlineCitationsText 
+            text={text}
+            references={message.references}
+            activity={message.activity}
+            messageId={message.id}
+            onActivate={() => {/* no-op for now */}}
+          />
+        </div>
         
         {/* Display parsed citations from response text */}
         {!isUser && parsedCitations.length > 0 && (
@@ -49,8 +62,8 @@ export default function MessageBubble({ message }) {
             <h4 className="font-semibold text-sm text-gray-700 mb-2">Knowledge Sources:</h4>
             <div className="space-y-2">
               {parsedCitations.map((citation, i) => (
-                <div key={i} className="text-sm text-gray-700 bg-gray-50 p-3 rounded">
-                  <div className="font-medium text-xs text-gray-500 mb-1">Reference {citation.ref_id}</div>
+                <div id={`ref-${message.id}-${citation.ref_id || i}`} key={i} className="text-sm text-gray-700 bg-gray-50 p-3 rounded">
+                  <div className="font-medium text-xs text-gray-500 mb-1">Reference {citation.ref_id != null ? citation.ref_id + 1 : i + 1}</div>
                   <div className="line-clamp-3">{citation.content}</div>
                 </div>
               ))}
@@ -76,7 +89,7 @@ export default function MessageBubble({ message }) {
             <h4 className="font-semibold text-sm text-gray-700 mb-2">Source Documents:</h4>
             <div className="space-y-1">
               {message.references.map((ref, i) => (
-                <div key={i} className="text-xs">
+                <div id={`ref-${message.id}-${i}`} key={i} className="text-xs">
                   <div className="text-gray-600">
                     <span className="font-medium">Type:</span> {ref.type}
                     {ref.rerankerScore && (
@@ -84,14 +97,20 @@ export default function MessageBubble({ message }) {
                     )}
                   </div>
                   {ref.blobUrl && (
-                    <a 
-                      href={ref.blobUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 break-all"
-                    >
-                      {ref.blobUrl.split('/').pop()}
-                    </a>
+                    <div className="flex items-center gap-2 flex-wrap" title={ref.blobUrl.split('/').pop()}>
+                      <span className="truncate max-w-[220px] break-all">{ref.blobUrl.split('/').pop()}</span>
+                      <a
+                        href={ref.blobUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 transition border border-blue-200 flex items-center gap-1"
+                        aria-label={`Open source document ${ref.blobUrl.split('/').pop()}`}
+                        title={`Open ${ref.blobUrl.split('/').pop()}`}
+                      >
+                        <span className="inline-block w-3 h-3">↗</span>
+                        Open
+                      </a>
+                    </div>
                   )}
                 </div>
               ))}

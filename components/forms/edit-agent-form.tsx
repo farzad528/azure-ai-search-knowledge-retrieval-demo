@@ -3,10 +3,11 @@
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { createAgentSchema, type CreateAgentFormData } from '@/lib/validations'
+// (Note: reuse simple model value without full schema here)
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FormField, FormLabel, FormControl, FormDescription, FormMessage } from '@/components/ui/form'
 import { FormFrame } from '@/components/shared/form-frame'
 import { useToast } from '@/components/ui/toast'
@@ -68,11 +69,8 @@ export function EditAgentForm({
     },
   })
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = form
-
+  const { register, handleSubmit, formState: { errors }, setValue, watch, trigger } = form
   const watchedModel = watch('model')
-  const watchedTemperature = watch('temperature')
-  const watchedMaxTokens = watch('maxTokens')
 
   const handleFormSubmit = async (data: any) => {
     try {
@@ -214,21 +212,73 @@ export function EditAgentForm({
             </FormField>
           </div>
 
-          {/* Model Configuration - Read-only for editing */}
+          {/* Model Configuration - now editable */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Model configuration</h3>
-            
             <FormField name="model">
-              <FormLabel>AI model</FormLabel>
+              <FormLabel required>AI model</FormLabel>
               <FormControl>
-                <div className="p-3 bg-bg-subtle rounded-md border border-stroke-divider">
-                  <span className="text-sm text-fg-muted">
-                    {agent.models?.[0]?.azureOpenAIParameters?.modelName || 'gpt-4o-mini'}
-                  </span>
-                  <p className="text-xs text-fg-muted mt-1">
-                    Model configuration cannot be changed after creation
-                  </p>
-                </div>
+                <Select
+                  value={watchedModel || agent.models?.[0]?.azureOpenAIParameters?.modelName || 'gpt-4o-mini'}
+                  onValueChange={(value) => {
+                    setValue('model', value)
+                    trigger('model')
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gpt-4o-mini">
+                      <div>
+                        <div className="font-medium">GPT-4o Mini</div>
+                        <div className="text-xs text-fg-muted">Fast, cost-effective, recommended</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gpt-4o">
+                      <div>
+                        <div className="font-medium">GPT-4o</div>
+                        <div className="text-xs text-fg-muted">Highest quality responses</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gpt-4.1-nano">
+                      <div>
+                        <div className="font-medium">GPT-4.1 Nano</div>
+                        <div className="text-xs text-fg-muted">Ultra-fast, minimal cost</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gpt-4.1-mini">
+                      <div>
+                        <div className="font-medium">GPT-4.1 Mini</div>
+                        <div className="text-xs text-fg-muted">Fast and efficient</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gpt-4.1">
+                      <div>
+                        <div className="font-medium">GPT-4.1</div>
+                        <div className="text-xs text-fg-muted">High performance</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gpt-5-nano">
+                      <div>
+                        <div className="font-medium">GPT-5 Nano</div>
+                        <div className="text-xs text-fg-muted">Latest nano model</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gpt-5-mini">
+                      <div>
+                        <div className="font-medium">GPT-5 Mini</div>
+                        <div className="text-xs text-fg-muted">Latest mini model</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gpt-5">
+                      <div>
+                        <div className="font-medium">GPT-5</div>
+                        <div className="text-xs text-fg-muted">Latest flagship model</div>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </FormControl>
             </FormField>
           </div>

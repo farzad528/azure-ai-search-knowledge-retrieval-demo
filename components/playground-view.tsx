@@ -16,6 +16,7 @@ import { ViewCodeModal } from '@/components/view-code-modal'
 import { DocumentViewerModal } from '@/components/document-viewer-modal'
 import { SourceKindIcon } from '@/components/source-kind-icon'
 import { aggregateKinds, SourceKind } from '@/lib/sourceKinds'
+import { InlineCitationsText } from '@/components/inline-citations'
 import { Tooltip } from '@/components/ui/tooltip'
 import { fetchAgents, retrieveFromAgent } from '../lib/api'
 import { useConversationStarters } from '@/lib/conversationStarters'
@@ -82,6 +83,7 @@ export function PlaygroundView() {
   
   const [agents, setAgents] = useState<KnowledgeAgent[]>([])
   const [selectedAgent, setSelectedAgent] = useState<KnowledgeAgent | null>(null)
+  const [agentsLoading, setAgentsLoading] = useState<boolean>(true)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [chatHistory, setChatHistory] = useState<Array<{
@@ -112,6 +114,7 @@ export function PlaygroundView() {
   useEffect(() => {
     const loadAgents = async () => {
       try {
+        setAgentsLoading(true)
         const data = await fetchAgents()
         const rawAgents = data.value || []
         
@@ -150,6 +153,9 @@ export function PlaygroundView() {
         }
       } catch (err) {
         console.error('Failed to load agents:', err)
+      }
+      finally {
+        setAgentsLoading(false)
       }
     }
     
@@ -360,8 +366,19 @@ export function PlaygroundView() {
     return (
       <div className="h-[calc(100vh-6rem)] flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-lg font-semibold mb-2">No agent selected</h2>
-          <p className="text-fg-muted">Please select or create a knowledge agent to start chatting.</p>
+          {agentsLoading ? (
+            <>
+              <div className="flex items-center justify-center mb-3">
+                <div className="h-8 w-8 border-2 border-fg-muted border-t-transparent rounded-full animate-spin" aria-label="Loading agents" />
+              </div>
+              <p className="text-sm text-fg-muted">Loading agents…</p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-semibold mb-2">No agent selected</h2>
+              <p className="text-fg-muted">Please select or create a knowledge agent to start chatting.</p>
+            </>
+          )}
         </div>
       </div>
     )
@@ -722,7 +739,13 @@ function MessageBubble({ message, onOpenDocument }: { message: Message, onOpenDo
               if (content.type === 'text') {
                 return (
                   <p key={index} className="whitespace-pre-wrap">
-                    {content.text}
+                    <InlineCitationsText 
+                      text={content.text}
+                      references={message.references}
+                      activity={message.activity}
+                      messageId={message.id}
+                      onActivate={() => setExpanded(true)}
+                    />
                   </p>
                 )
               } else if (content.type === 'image') {
@@ -772,14 +795,16 @@ function MessageBubble({ message, onOpenDocument }: { message: Message, onOpenDo
                     {message.references && message.references.length > 0 && (
                       <div className="space-y-2">
                         <h6 className="text-xs font-medium text-fg-muted uppercase tracking-wide">References</h6>
-                        {Array.from(new Map(message.references.map(r => [r.blobUrl || r.id, r])).values()).map((ref) => {
+                        {Array.from(new Map(message.references.map((r, idx) => [r.blobUrl || r.id, { r, idx }])).values()).map(({ r: ref, idx }) => {
                           const fileName = ref.blobUrl ? decodeURIComponent(ref.blobUrl.split('/').pop() || ref.id) : (ref.docKey || ref.id)
+                          const activity = message.activity?.find(a => a.id === ref.activitySource)
+                          const label = activity?.knowledgeSourceName || fileName
                           return (
-                            <div key={ref.id + (ref.blobUrl || '')} className="p-3 bg-bg-subtle rounded-md group">
+                            <div id={`ref-${message.id}-${idx}`} key={ref.id + (ref.blobUrl || '')} className="p-3 bg-bg-subtle rounded-md group border border-transparent hover:border-accent/40 transition">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="flex items-center gap-1 text-xs font-medium text-accent">
                                   <SourceKindIcon kind={ref.type} size={14} variant="plain" />
-                                  {ref.type}
+                                  {label || ref.type}
                                 </span>
                                 <div className="flex items-center gap-2">
                                   {ref.rerankerScore && (
@@ -788,19 +813,21 @@ function MessageBubble({ message, onOpenDocument }: { message: Message, onOpenDo
                                   {ref.blobUrl && onOpenDocument && (
                                     <button
                                       onClick={() => onOpenDocument(ref.blobUrl!)}
-                                      className="text-[10px] px-2 py-0.5 rounded bg-accent-subtle text-accent hover:bg-accent/20 transition"
-                                    >Open</button>
+                                      className="text-[10px] px-2 py-0.5 rounded bg-accent-subtle text-accent hover:bg-accent/20 transition flex items-center gap-1"
+                                      aria-label={`Open source document ${fileName}`}
+                                      title={`Open ${fileName}`}
+                                    >
+                                      <span className="inline-block w-3 h-3">↗</span>
+                                      Open
+                                    </button>
                                   )}
                                 </div>
                               </div>
-                              <p className="text-xs text-fg-muted break-all"><span className="font-medium">{fileName}</span>{ref.blobUrl && ' • '} {ref.blobUrl && (
-                                <a
-                                  href={ref.blobUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="underline text-accent hover:text-accent/80"
-                                >download</a>
-                              )}</p>
+                              <p className="text-xs text-fg-muted break-all" title={fileName}>
+                                <span className="font-medium inline-flex items-center gap-1 max-w-full">
+                                  <span className="truncate max-w-[240px] inline-block align-bottom">{fileName}</span>
+                                </span>
+                              </p>
                             </div>
                           )
                         })}

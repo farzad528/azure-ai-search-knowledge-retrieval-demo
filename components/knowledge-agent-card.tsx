@@ -6,9 +6,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils'
 import Link from 'next/link'
-import { SourceKindIcon } from '@/components/source-kind-icon'
-import { aggregateKinds, SourceKind } from '@/lib/sourceKinds'
-import { Tooltip } from '@/components/ui/tooltip'
+// Removed source kind icon rendering per request (no '?' placeholders)
 
 type KnowledgeAgent = {
   id: string
@@ -67,17 +65,7 @@ export function KnowledgeAgentCard({ agent }: KnowledgeAgentCardProps) {
                 <span className="text-xs text-fg-muted">
                   {status.label}
                 </span>
-                {agent.sourceDetails && agent.sourceDetails.length > 0 && (
-                  <div className="flex items-center gap-1 ml-2">
-                    {Object.entries(aggregateKinds(agent.sourceDetails as any))
-                      .filter(([_, count]) => count > 0)
-                      .map(([kind, count]) => (
-                        <Tooltip key={kind} content={`${count} ${kind} source${count>1?'s':''}`}>
-                          <SourceKindIcon kind={kind as SourceKind} size={16} boxSize={28} />
-                        </Tooltip>
-                      ))}
-                  </div>
-                )}
+                {/* Aggregated source kind icons removed */}
               </div>
             </div>
           </div>
@@ -103,11 +91,11 @@ export function KnowledgeAgentCard({ agent }: KnowledgeAgentCardProps) {
           <div>
             <div className="text-xs text-fg-muted mb-2">Knowledge sources</div>
             <div className="flex flex-wrap gap-1">
-              {(agent.sourceDetails ? agent.sourceDetails.map(sd => ({ name: sd.name, kind: sd.kind })) : agent.sources.map(n => ({ name: n, kind: 'searchIndex' })))
+              {(agent.sourceDetails ? agent.sourceDetails.map(sd => sd.name) : agent.sources)
                 .slice(0,3)
-                .map((sd, index) => (
-                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 rounded-pill bg-bg-subtle text-xs font-medium text-fg-muted">
-                    <SourceKindIcon kind={sd.kind} size={14} boxSize={22} variant="plain" /> {sd.name}
+                .map((name, index) => (
+                  <span key={index} className="inline-flex px-2 py-1 rounded-pill bg-bg-subtle text-xs font-medium text-fg-muted">
+                    {name}
                   </span>
                 ))}
               {agent.sources.length > 3 && (
