@@ -35,6 +35,7 @@ type AgentData = {
   status?: string
   lastRun?: string
   createdBy?: string
+  ['@odata.etag']?: string
 }
 
 type KnowledgeSource = {
@@ -83,7 +84,12 @@ export default function AgentDetailPage() {
   }, [agentId])
 
   const handleUpdateAgent = async (data: Partial<AgentData>) => {
-    await updateAgent(agentId, data)
+    // Ensure ETag is included for concurrency safety if present
+    const payload = {
+      ...data,
+      ['@odata.etag']: agent?.['@odata.etag']
+    }
+    await updateAgent(agentId, payload)
     await loadData() // Refresh data after update
   }
 

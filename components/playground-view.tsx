@@ -19,6 +19,7 @@ import { aggregateKinds, SourceKind } from '@/lib/sourceKinds'
 import { InlineCitationsText } from '@/components/inline-citations'
 import { Tooltip } from '@/components/ui/tooltip'
 import { fetchAgents, retrieveFromAgent } from '../lib/api'
+import { processImageFile, ProcessedImageResult } from '@/lib/imageProcessing'
 import { useConversationStarters } from '@/lib/conversationStarters'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils'
@@ -29,6 +30,8 @@ type KnowledgeAgent = {
   model?: string
   sources: string[]
   status?: string
+  outputConfiguration?: { modality?: string; answerInstructions?: string }
+  retrievalInstructions?: string
 }
 
 type MessageContent = 
@@ -94,10 +97,11 @@ export function PlaygroundView() {
     messages: Message[]
   }>>([])
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
-  const [selectedImage, setSelectedImage] = useState<string>('')
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
+  // Multi-image attachments (id + dataUrl). Processing status ensures we don't send incomplete data URLs.
+  const [images, setImages] = useState<Array<{ id: string; dataUrl: string; status: 'processing' | 'ready' }>>([])
+  const [imageWarning, setImageWarning] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [pendingQueue, setPendingQueue] = useState<string[]>([])
+  const [pendingQueue, setPendingQueue] = useState<Array<{ prompt: string; images: string[] }>>([])
   const [processing, setProcessing] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [runtimeSettingsOpen, setRuntimeSettingsOpen] = useState(false)
@@ -123,10 +127,11 @@ export function PlaygroundView() {
           id: agent.name,
           name: agent.name,
           model: agent.models?.[0]?.azureOpenAIParameters?.modelName,
-          sources: (agent.knowledgeSources || []).map(ks => ks.name),
+            sources: (agent.knowledgeSources || []).map(ks => ks.name),
           status: 'active',
           description: agent.description,
-          outputConfiguration: agent.outputConfiguration
+          outputConfiguration: agent.outputConfiguration,
+          retrievalInstructions: agent.retrievalInstructions
         }))
         
         setAgents(agentsList)
@@ -245,9 +250,13 @@ export function PlaygroundView() {
   }, [messages, currentChatId, selectedAgent, chatHistory])
 
   // Unified processing function
-  const processRequest = async (prompt: string) => {
+  const processRequest = async (job: { prompt: string; images: string[] }) => {
     if (!selectedAgent) return
-    const contentParts: MessageContent[] = prompt ? [{ type: 'text', text: prompt }] : []
+    const contentParts: MessageContent[] = []
+    for (const url of job.images) {
+      contentParts.push({ type: 'image', image: { url } })
+    }
+    if (job.prompt) contentParts.push({ type: 'text', text: job.prompt })
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -258,14 +267,17 @@ export function PlaygroundView() {
 
     const convertContent = async (c: MessageContent) => {
       if (c.type === 'text') return { type: 'text', text: c.text }
-      if (c.type === 'image') return { type: 'image', image: { url: c.image.url } }
+      if (c.type === 'image') {
+        // Ensure data URL format (starts with data:)
+        return { type: 'image', image: { url: c.image.url } } // drop any legacy fields like detail
+      }
       return c as any
     }
     const azureMessages = [
       ...await Promise.all(messages.map(async (m) => ({
         role: m.role,
         content: await Promise.all(m.content.map(convertContent))
-      }))),
+      })) ),
       { role: 'user', content: await Promise.all(contentParts.map(convertContent)) }
     ]
     try {
@@ -313,19 +325,26 @@ export function PlaygroundView() {
     return () => { cancelled = true }
   }, [pendingQueue, processing, selectedAgent])
 
-  const enqueuePrompt = (prompt: string) => {
-    if (!prompt.trim()) return
-    setPendingQueue(prev => [...prev, prompt.trim()])
+  const enqueuePrompt = (prompt: string, imageUrls: string[]) => {
+    const text = prompt.trim()
+    if (!text && imageUrls.length === 0) return
+    setPendingQueue(prev => [...prev, { prompt: text, images: imageUrls }])
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || !selectedAgent) return
-    enqueuePrompt(input)
+    if ((!input.trim() && images.length === 0) || !selectedAgent) return
+    if (images.some(i => i.status === 'processing')) {
+      setImageWarning('Please wait for image processing to finish')
+      return
+    }
+    enqueuePrompt(input, images.map(i => i.dataUrl))
     setInput('')
+    setImages([])
+    setImageWarning('')
   }
 
-  const sendPrompt = (prompt: string) => enqueuePrompt(prompt)
+  const sendPrompt = (prompt: string) => enqueuePrompt(prompt, [])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -334,22 +353,69 @@ export function PlaygroundView() {
     }
   }
 
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    if (isLoading) return
+    const items = e.clipboardData?.items
+    if (!items) return
+    let added = 0
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        if (images.length + added >= 10) { setImageWarning('Maximum of 10 images reached'); break }
+        const file = item.getAsFile()
+        if (file) {
+          const url = URL.createObjectURL(file)
+          await handleImageSelect(url, file)
+          added++
+          e.preventDefault()
+        }
+      }
+    }
+  }
+
   const handleVoiceInput = (transcript: string) => {
     setInput(prev => prev + (prev ? ' ' : '') + transcript)
     textareaRef.current?.focus()
   }
 
-  const handleImageSelect = (imageUrl: string, file: File) => {
-    setSelectedImage(imageUrl)
-    setSelectedImageFile(file)
+  const handleImageSelect = async (imageUrl: string, file: File) => {
+    // imageUrl is a blob URL for quick preview.
+    // We optimistically process immediately so user sees optimized dimensions & size before sending.
+    // Rationale for processing (aligned with vision model internal scaling):
+    //  - Long side >2048px yields no extra model detail (will be downscaled internally).
+    //  - Ensuring short side >= ~768px (without upscaling beyond original) preserves high-detail tiling ceiling.
+    //  - Compression targets <=4MB to avoid unnecessary bandwidth while safely under platform limits.
+    //  - No 'detail' property is sent (API version 2025-08-01-preview does not support it); we just provide a data URL.
+    if (images.length >= 10) { setImageWarning('Maximum of 10 images reached'); return }
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    setImages(prev => [...prev, { id, dataUrl: imageUrl, status: 'processing' }])
+    try {
+      const processed = await processImageFile(file, {
+        maxLongSide: 2048,
+        targetMinShortSide: 768,
+        maxBytes: 4 * 1024 * 1024
+      })
+      setImages(prev => prev.map(img => img.id === id ? { ...img, dataUrl: processed.dataUrl, status: 'ready' } : img))
+    } catch (err) {
+      console.warn('Processing failed; converting to base64 fallback.', err)
+      try {
+        const fallback = await convertBlobToBase64(file)
+        setImages(prev => prev.map(img => img.id === id ? { ...img, dataUrl: fallback, status: 'ready' } : img))
+      } catch (inner) {
+        console.error('Fallback failed; removing image.', inner)
+        setImages(prev => prev.filter(img => img.id !== id))
+      }
+    }
   }
 
-  const handleImageRemove = () => {
-    if (selectedImage) {
-      URL.revokeObjectURL(selectedImage)
-    }
-    setSelectedImage('')
-    setSelectedImageFile(null)
+  const handleImageRemove = (id: string) => {
+    setImages(prev => prev.filter(img => {
+      if (img.id === id && img.dataUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(img.dataUrl)
+      }
+      return img.id !== id
+    }))
+    setImageWarning('')
   }
 
   // Convert blob URL to base64 data URL
@@ -446,7 +512,18 @@ export function PlaygroundView() {
             <div className="flex items-center gap-3">
               <AgentAvatar size={44} iconSize={22} variant="subtle" title={selectedAgent.name} />
               <div>
-                <h1 className="font-semibold text-xl">{selectedAgent.name}</h1>
+                <h1 className="font-semibold text-xl flex items-center gap-2">
+                  {selectedAgent.name}
+                  <span className={cn(
+                    'text-[10px] uppercase tracking-wide px-2 py-0.5 rounded font-medium',
+                    selectedAgent.outputConfiguration?.modality === 'answerSynthesis' && 'bg-accent-subtle text-accent',
+                    selectedAgent.outputConfiguration?.modality === 'extractiveData' && 'bg-purple-100/50 text-purple-600 dark:text-purple-300'
+                  )}>
+                    {selectedAgent.outputConfiguration?.modality === 'answerSynthesis' && 'Answer'}
+                    {selectedAgent.outputConfiguration?.modality === 'extractiveData' && 'Extract'}
+                    {!selectedAgent.outputConfiguration?.modality && 'Default'}
+                  </span>
+                </h1>
                 <p className="text-sm text-fg-muted flex items-center gap-3 flex-wrap">
                   <span>{selectedAgent.model || 'Default model'}</span>
                   <span className="text-fg-muted">•</span>
@@ -588,15 +665,32 @@ export function PlaygroundView() {
         {/* Input */}
         <div className="border-t border-stroke-divider p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Image preview if selected */}
-            {selectedImage && (
-              <div className="flex justify-start">
-                <ImageInput
-                  onImageSelect={handleImageSelect}
-                  onImageRemove={handleImageRemove}
-                  selectedImage={selectedImage}
-                  disabled={isLoading}
-                />
+            {/* Multi-image thumbnails */}
+            {images.length > 0 && (
+              <div className="flex flex-wrap gap-3">
+                {images.map(img => (
+                  <div key={img.id} className="relative">
+                    <img
+                      src={img.dataUrl}
+                      alt="attachment"
+                      className={cn('h-20 w-20 object-cover rounded border border-stroke-divider', img.status==='processing' && 'opacity-60 animate-pulse')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleImageRemove(img.id)}
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-bg-card border border-stroke-divider flex items-center justify-center text-fg-muted hover:text-fg-default"
+                      aria-label="Remove image"
+                    >
+                      <Dismiss20Regular className="h-3 w-3" />
+                    </button>
+                    {img.status === 'processing' && (
+                      <div className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-fg-muted bg-bg-card/40 backdrop-blur-sm rounded">…</div>
+                    )}
+                  </div>
+                ))}
+                {imageWarning && (
+                  <div className="text-[10px] text-status-warning font-medium self-end pb-1">{imageWarning}</div>
+                )}
               </div>
             )}
             
@@ -606,6 +700,7 @@ export function PlaygroundView() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
                 placeholder="Ask me anything about your knowledge sources..."
                 className="min-h-[60px] max-h-[200px] resize-none pr-32"
                 disabled={isLoading}
@@ -617,15 +712,13 @@ export function PlaygroundView() {
                 />
                 <ImageInput
                   onImageSelect={handleImageSelect}
-                  onImageRemove={handleImageRemove}
-                  selectedImage={selectedImage}
-                  disabled={isLoading}
+                  disabled={isLoading || images.length >= 10}
                 />
                 <Button
                   type="submit"
                   size="icon"
                   className="h-8 w-8"
-                  disabled={(!input.trim() && !selectedImage) || isLoading}
+                  disabled={(!input.trim() && images.length === 0) || isLoading || images.some(i => i.status==='processing')}
                 >
                   <Send20Regular className="h-4 w-4" />
                 </Button>
@@ -677,6 +770,29 @@ export function PlaygroundView() {
                   <h4 className="text-sm font-medium mb-3">Model</h4>
                   <div className="p-3 bg-bg-subtle rounded-md">
                     <span className="text-sm">{selectedAgent.model || 'Default model'}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Mode & Instructions</h4>
+                  <div className="p-3 bg-bg-subtle rounded-md space-y-3">
+                    <div className="text-sm font-medium">
+                      {selectedAgent.outputConfiguration?.modality === 'answerSynthesis' && 'Answer Synthesis'}
+                      {selectedAgent.outputConfiguration?.modality === 'extractiveData' && 'Extractive Data'}
+                      {!selectedAgent.outputConfiguration?.modality && '—'}
+                    </div>
+                    {selectedAgent.outputConfiguration?.answerInstructions && (
+                      <div className="text-xs text-fg-muted whitespace-pre-wrap">
+                        <div className="uppercase tracking-wide font-semibold mb-1 text-[10px] text-fg-muted">Answer Instructions</div>
+                        {selectedAgent.outputConfiguration.answerInstructions}
+                      </div>
+                    )}
+                    {selectedAgent.retrievalInstructions && (
+                      <div className="text-xs text-fg-muted whitespace-pre-wrap">
+                        <div className="uppercase tracking-wide font-semibold mb-1 text-[10px] text-fg-muted">Retrieval Instructions</div>
+                        {selectedAgent.retrievalInstructions}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

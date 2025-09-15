@@ -8,10 +8,18 @@ export async function POST(request, { params }) {
   try {
     const agentId = params.id
     const body = await request.json()
+    // Forward end-user authorization token for ACL enforcement if provided
+  // Support either canonical header or a legacy alias (if client provided). This header is required for ACL (document-level security) enforcement.
+  const aclHeader = request.headers.get('x-ms-query-source-authorization') || request.headers.get('x-ms-user-authorization')
     
     console.log('=== AGENT RETRIEVE REQUEST ===')
     console.log('Agent ID:', agentId)
     console.log('Request body:', JSON.stringify(body, null, 2))
+    if (aclHeader) {
+      console.log('ACL header detected (x-ms-query-source-authorization) length:', aclHeader.length)
+    } else {
+      console.log('No ACL header supplied by client request')
+    }
     
     const url = `${ENDPOINT}/agents/${agentId}/retrieve?api-version=${API_VERSION}`
     console.log('Request URL:', url)
@@ -20,7 +28,9 @@ export async function POST(request, { params }) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'api-key': API_KEY
+        'api-key': API_KEY,
+        // Pass through ACL header when present so Azure AI Search can enforce document-level security
+        ...(aclHeader ? { 'x-ms-query-source-authorization': aclHeader } : {})
       },
       body: JSON.stringify(body)
     })
