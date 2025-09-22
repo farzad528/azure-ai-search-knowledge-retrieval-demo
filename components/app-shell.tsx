@@ -4,13 +4,11 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { 
-  Search20Regular, 
-  Database20Regular, 
-  Bot20Regular, 
-  Play20Regular, 
-  ChartMultiple20Regular, 
-  Settings20Regular,
+import {
+  Search20Regular,
+  Database20Regular,
+  Bot20Regular,
+  Play20Regular,
   Navigation20Regular,
   Dismiss20Regular
 } from '@fluentui/react-icons'
@@ -31,8 +29,6 @@ const navigation: NavItem[] = [
   { href: '/knowledge-sources', label: 'Knowledge sources', icon: Database20Regular },
   { href: '/knowledge-agents', label: 'Knowledge agents', icon: Bot20Regular },
   { href: '/playground', label: 'Playground', icon: Play20Regular },
-  { href: '/activity', label: 'Activity', icon: ChartMultiple20Regular },
-  { href: '/settings', label: 'Settings', icon: Settings20Regular },
 ]
 
 interface AppShellProps {

@@ -17,11 +17,15 @@ import { formatRelativeTime } from '@/lib/utils'
 type AgentData = {
   name: string
   description?: string
-  knowledgeSources: Array<{
+  knowledgeSources?: Array<{
     name: string
-    includeReferences: boolean
+    includeReferences?: boolean
+    includeReferenceSourceData?: boolean | null
+    alwaysQuerySource?: boolean | null
+    maxSubQueries?: number | null
+    rerankerThreshold?: number | null
   }>
-  models: Array<{
+  models?: Array<{
     kind: string
     azureOpenAIParameters?: {
       resourceUri: string
@@ -31,7 +35,15 @@ type AgentData = {
   }>
   outputConfiguration?: {
     modality: string
+    answerInstructions?: string | null
+    attemptFastPath?: boolean | null
+    includeActivity?: boolean | null
   }
+  retrievalInstructions?: string | null
+  requestLimits?: {
+    maxRuntimeInSeconds?: number | null
+    maxOutputSize?: number | null
+  } | null
   status?: string
   lastRun?: string
   createdBy?: string
@@ -84,12 +96,15 @@ export default function AgentDetailPage() {
   }, [agentId])
 
   const handleUpdateAgent = async (data: Partial<AgentData>) => {
-    // Ensure ETag is included for concurrency safety if present
+    if (!agent) return
+
+    // Ensure required fields are included
     const payload = {
+      name: agent.name,
       ...data,
       ['@odata.etag']: agent?.['@odata.etag']
     }
-    await updateAgent(agentId, payload)
+    await updateAgent(agentId, payload as any)
     await loadData() // Refresh data after update
   }
 

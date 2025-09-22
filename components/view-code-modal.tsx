@@ -1,12 +1,11 @@
 'use client'
 
 import * as React from 'react'
-import { Dismiss20Regular, Copy20Regular, Checkmark20Regular, ChevronDown20Regular } from '@fluentui/react-icons'
+import { Dismiss20Regular, Copy20Regular, Checkmark20Regular } from '@fluentui/react-icons'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { cn } from '@/lib/utils'
 
-type MessageContent = 
+type MessageContent =
   | { type: 'text'; text: string }
   | { type: 'image'; image: { url: string; file?: File } }
 
@@ -40,327 +39,274 @@ export function ViewCodeModal({ isOpen, onClose, agentId, agentName, messages }:
     setTimeout(() => setCopiedCode(null), 2000)
   }
 
-  // Get actual environment variables (don't expose API key on client side)
-  const endpoint = process.env.NEXT_PUBLIC_AZURE_SEARCH_ENDPOINT || '{AZURE_SEARCH_ENDPOINT}'
-  const apiKey = '{AZURE_SEARCH_API_KEY}' // Replace with your actual API key
-
-  // Convert current messages to Azure API format for code examples
-  const formatMessagesForAPI = (messages: Message[]) => {
-    return messages.map(msg => ({
-      role: msg.role,
-      content: msg.content.map(c => {
-        if (c.type === 'text') {
-          return { type: 'text', text: c.text }
-        } else if (c.type === 'image') {
-          return { type: 'image', image: { url: '[BASE64_IMAGE_DATA]' } }
-        }
-        return c
-      })
-    }))
-  }
-
-  // Get formatted messages or use fallback example
-  const apiMessages = messages.length > 0 ? formatMessagesForAPI(messages) : [
-    {
-      role: 'user',
-      content: [{ type: 'text', text: 'What is Azure AI Search?' }]
-    },
-    {
-      role: 'assistant', 
-      content: [{ type: 'text', text: 'Azure AI Search is a cloud search service with AI capabilities.' }]
-    },
-    {
-      role: 'user',
-      content: [{ type: 'text', text: 'How does it relate to Knowledge Retrieval?' }]
-    }
-  ]
-
-  // Generate code examples
-  const conversationTitle = messages.length > 0 ? `${messages.length} message${messages.length !== 1 ? 's' : ''} from current conversation` : 'example conversation'
-  
-  const curlCode = `# ${conversationTitle} with ${agentName} agent using Azure AI Search directly
-curl -X POST "${endpoint}/agents/${agentId}/retrieve?api-version=2025-08-01-preview" \\
+  // Code snippets based on Microsoft documentation
+  const curlCode = `# Retrieve from knowledge agent using REST API
+curl -X POST "https://{search-service}.search.windows.net/agents/${agentId}/retrieve?api-version=2025-08-01-preview" \\
   -H "Content-Type: application/json" \\
-  -H "api-key: ${apiKey}" \\
-  -d '${JSON.stringify({ messages: apiMessages }, null, 2)}'`
+  -H "api-key: {search-admin-api-key}" \\
+  -d '{
+    "messages": [
+      {
+        "role": "user",
+        "content": "What information is available about Azure AI Search?"
+      }
+    ]
+  }'
 
-  const pythonCode = `import requests
-import json
+# Response includes:
+# - Generated answer from the agent
+# - References to source documents
+# - Activity details showing search operations`
 
-# Configuration - replace with your actual values
-ENDPOINT = "${endpoint}"
-API_KEY = "${apiKey}"
-AGENT_ID = "${agentId}"
+  const pythonCode = `# pip install azure-search-documents==11.7.0b1
 
-def retrieve_from_agent(messages):
-    """Retrieve from the ${agentName} agent using Azure AI Search directly with conversation history"""
-    url = f"{endpoint}/agents/{agentId}/retrieve"
-    
-    payload = {
+from azure.search.documents.agentic import SearchAgentClient
+from azure.core.credentials import AzureKeyCredential
+
+# Create client
+endpoint = "https://{search-service}.search.windows.net"
+api_key = "{search-admin-api-key}"
+agent_id = "${agentId}"
+
+client = SearchAgentClient(endpoint, AzureKeyCredential(api_key))
+
+# Retrieve from agent
+messages = [
+    {
+        "role": "user",
+        "content": "What information is available about Azure AI Search?"
+    }
+]
+
+response = client.agents.retrieve(
+    agent_name=agent_id,
+    body={
         "messages": messages
     }
-    
-    response = requests.post(
-        url,
-        headers={
-            "Content-Type": "application/json",
-            "api-key": API_KEY
-        },
-        params={"api-version": "2025-08-01-preview"},
-        json=payload
-    )
-    
-    response.raise_for_status()
-    return response.json()
+)
 
-# ${conversationTitle} with ${agentName} agent
-try:
-    conversation = ${JSON.stringify(apiMessages, null, 4).replace(/^/gm, '    ')}
-    
-    result = retrieve_from_agent(conversation)
-    
-    # Parse response
-    if result.get("response") and len(result["response"]) > 0:
-        content = result["response"][0].get("content", [])
-        if len(content) > 0:
-            print("Response:", content[0].get("text", "No text found"))
-    
-    # Show references if available
-    if result.get("references"):
-        print(f"References: {len(result['references'])}")
-        
-    # Show activity if available  
-    if result.get("activity"):
-        print(f"Search activities: {len(result['activity'])}")
-        
-except requests.exceptions.RequestException as e:
-    print(f"Error: {e}")
-`
+# Access response
+if response.response:
+    print(f"Answer: {response.response[0].content[0].text}")
 
-  const typescriptCode = `interface MessageContent {
-  type: 'text'
-  text: string
-}
+# Access references
+if response.references:
+    print(f"Found {len(response.references)} references")
 
-interface Message {
-  role: 'user' | 'assistant'
-  content: MessageContent[]
-}
+# Access activity
+if response.activity:
+    print(f"Performed {len(response.activity)} search operations")`
 
-interface RetrieveRequest {
-  messages: Message[]
-}
+  const typescriptCode = `// npm install @azure/search-documents@12.0.0-beta.9
 
-interface Reference {
-  type: string
-  id: string
-  activitySource: number
-  rerankerScore?: number
-  docKey?: string
-}
+import { SearchAgentClient, AzureKeyCredential } from "@azure/search-documents";
 
-interface Activity {
-  type: string
-  id: number
-  knowledgeSourceName?: string
-  count?: number
-  elapsedMs?: number
-  searchIndexArguments?: any
-  azureBlobArguments?: any
-}
+// Create client
+const endpoint = "https://{search-service}.search.windows.net";
+const apiKey = "{search-admin-api-key}";
+const agentId = "${agentId}";
 
-interface RetrieveResponse {
-  response: Array<{
-    content: Array<{
-      type: string
-      text: string
-    }>
-  }>
-  references?: Reference[]
-  activity?: Activity[]
-}
+const client = new SearchAgentClient(endpoint, new AzureKeyCredential(apiKey));
 
-class ${agentName.replace(/[^a-zA-Z0-9]/g, '')}Agent {
-  private readonly endpoint = '${endpoint}'
-  private readonly apiKey = '${apiKey}'
-  private readonly agentId = '${agentId}'
-
-  async retrieve(messages: Message[]): Promise<RetrieveResponse> {
-    const url = \`\${this.endpoint}/agents/\${this.agentId}/retrieve?api-version=2025-08-01-preview\`
-    
-    const payload: RetrieveRequest = {
-      messages
+// Retrieve from agent
+async function retrieveFromAgent() {
+  const messages = [
+    {
+      role: "user" as const,
+      content: "What information is available about Azure AI Search?"
     }
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': this.apiKey
-      },
-      body: JSON.stringify(payload)
-    })
-    
-    if (!response.ok) {
-      throw new Error(\`HTTP error! status: \${response.status}\`)
-    }
-    
-    return response.json()
+  ];
+
+  const response = await client.agents.retrieve(agentId, {
+    messages
+  });
+
+  // Access response
+  if (response.response && response.response.length > 0) {
+    const answer = response.response[0].content[0].text;
+    console.log(\`Answer: \${answer}\`);
+  }
+
+  // Access references
+  if (response.references) {
+    console.log(\`Found \${response.references.length} references\`);
+  }
+
+  // Access activity
+  if (response.activity) {
+    console.log(\`Performed \${response.activity.length} search operations\`);
   }
 }
 
-// ${conversationTitle} with ${agentName} agent
-const agent = new ${agentName.replace(/[^a-zA-Z0-9]/g, '')}Agent()
+retrieveFromAgent().catch(console.error);`
 
-try {
-  const conversation: Message[] = ${JSON.stringify(apiMessages, null, 2).replace(/^/gm, '  ')}
+  const javascriptCode = `// npm install @azure/search-documents@12.0.0-beta.9
 
-  const result = await agent.retrieve(conversation)
-  
-  // Parse response
-  if (result.response && result.response.length > 0) {
-    const content = result.response[0].content
-    if (content && content.length > 0) {
-      console.log('Response:', content[0].text)
+const { SearchAgentClient, AzureKeyCredential } = require("@azure/search-documents");
+
+// Create client
+const endpoint = "https://{search-service}.search.windows.net";
+const apiKey = "{search-admin-api-key}";
+const agentId = "${agentId}";
+
+const client = new SearchAgentClient(endpoint, new AzureKeyCredential(apiKey));
+
+// Retrieve from agent
+async function retrieveFromAgent() {
+  const messages = [
+    {
+      role: "user",
+      content: "What information is available about Azure AI Search?"
+    }
+  ];
+
+  const response = await client.agents.retrieve(agentId, {
+    messages
+  });
+
+  // Access response
+  if (response.response && response.response.length > 0) {
+    const answer = response.response[0].content[0].text;
+    console.log(\`Answer: \${answer}\`);
+  }
+
+  // Access references
+  if (response.references) {
+    console.log(\`Found \${response.references.length} references\`);
+  }
+
+  // Access activity
+  if (response.activity) {
+    console.log(\`Performed \${response.activity.length} search operations\`);
+  }
+}
+
+retrieveFromAgent().catch(console.error);`
+
+  const javaCode = `// Maven: com.azure:azure-search-documents:11.8.0-beta.1
+
+import com.azure.core.credential.AzureKeyCredential;
+import com.azure.search.documents.SearchAgentClient;
+import com.azure.search.documents.SearchAgentClientBuilder;
+import com.azure.search.documents.models.*;
+
+import java.util.Arrays;
+import java.util.List;
+
+public class KnowledgeAgentExample {
+    public static void main(String[] args) {
+        // Create client
+        String endpoint = "https://{search-service}.search.windows.net";
+        String apiKey = "{search-admin-api-key}";
+        String agentId = "${agentId}";
+
+        SearchAgentClient client = new SearchAgentClientBuilder()
+            .endpoint(endpoint)
+            .credential(new AzureKeyCredential(apiKey))
+            .buildClient();
+
+        // Build messages
+        List<Message> messages = Arrays.asList(
+            new Message()
+                .setRole(MessageRole.USER)
+                .setContent("What information is available about Azure AI Search?")
+        );
+
+        // Retrieve from agent
+        RetrieveRequest request = new RetrieveRequest()
+            .setMessages(messages);
+
+        RetrieveResponse response = client.getAgents()
+            .retrieve(agentId, request);
+
+        // Access response
+        if (response.getResponse() != null && !response.getResponse().isEmpty()) {
+            String answer = response.getResponse().get(0)
+                .getContent().get(0).getText();
+            System.out.println("Answer: " + answer);
+        }
+
+        // Access references
+        if (response.getReferences() != null) {
+            System.out.println("Found " + response.getReferences().size() + " references");
+        }
+
+        // Access activity
+        if (response.getActivity() != null) {
+            System.out.println("Performed " + response.getActivity().size() + " search operations");
+        }
+    }
+}`
+
+  const dotnetCode = `// NuGet: Azure.Search.Documents -Version 12.0.0-beta.8
+
+using Azure;
+using Azure.Search.Documents;
+using Azure.Search.Documents.Models.Agentic;
+
+// Create client
+string endpoint = "https://{search-service}.search.windows.net";
+string apiKey = "{search-admin-api-key}";
+string agentId = "${agentId}";
+
+var credential = new AzureKeyCredential(apiKey);
+var client = new SearchAgentClient(new Uri(endpoint), credential);
+
+// Build messages
+var messages = new List<Message>
+{
+    new Message
+    {
+        Role = MessageRole.User,
+        Content = new[]
+        {
+            new MessageContent
+            {
+                Type = "text",
+                Text = "What information is available about Azure AI Search?"
+            }
+        }
+    }
+};
+
+// Retrieve from agent
+var request = new RetrieveRequest
+{
+    Messages = messages
+};
+
+RetrieveResponse response = await client.Agents.RetrieveAsync(agentId, request);
+
+// Access response
+if (response.Response?.Any() == true)
+{
+    var answer = response.Response[0].Content[0].Text;
+    Console.WriteLine($"Answer: {answer}");
+}
+
+// Access references
+if (response.References != null)
+{
+    Console.WriteLine($"Found {response.References.Count} references");
+}
+
+// Access activity
+if (response.Activity != null)
+{
+    Console.WriteLine($"Performed {response.Activity.Count} search operations");
+}`
+
+  const getCodeSnippet = (language: string) => {
+    switch (language) {
+      case 'curl': return curlCode
+      case 'python': return pythonCode
+      case 'typescript': return typescriptCode
+      case 'javascript': return javascriptCode
+      case 'java': return javaCode
+      case 'dotnet': return dotnetCode
+      default: return curlCode
     }
   }
-  
-  // Show references and activity
-  console.log('References:', result.references?.length || 0)
-  console.log('Search activities:', result.activity?.length || 0)
-  
-} catch (error) {
-  console.error('Error:', error)
-}`
-
-  const dotnetCode = `using System.Text;
-using System.Text.Json;
-
-public class MessageContent
-{
-    public string Type { get; set; } = "";
-    public string Text { get; set; } = "";
-}
-
-public class Message
-{
-    public string Role { get; set; } = "";
-    public MessageContent[] Content { get; set; } = Array.Empty<MessageContent>();
-}
-
-public class RetrieveRequest
-{
-    public Message[] Messages { get; set; } = Array.Empty<Message>();
-}
-
-public class Reference
-{
-    public string Type { get; set; } = "";
-    public string Id { get; set; } = "";
-    public int ActivitySource { get; set; }
-    public double? RerankerScore { get; set; }
-    public string? DocKey { get; set; }
-}
-
-public class Activity
-{
-    public string Type { get; set; } = "";
-    public int Id { get; set; }
-    public string? KnowledgeSourceName { get; set; }
-    public int? Count { get; set; }
-    public int? ElapsedMs { get; set; }
-    public JsonElement? SearchIndexArguments { get; set; }
-    public JsonElement? AzureBlobArguments { get; set; }
-}
-
-public class RetrieveResponse
-{
-    public ResponseContent[] Response { get; set; } = Array.Empty<ResponseContent>();
-    public Reference[]? References { get; set; }
-    public Activity[]? Activity { get; set; }
-}
-
-public class ResponseContent
-{
-    public ContentItem[] Content { get; set; } = Array.Empty<ContentItem>();
-}
-
-public class ContentItem
-{
-    public string Type { get; set; } = "";
-    public string Text { get; set; } = "";
-}
-
-public class ${agentName.replace(/[^a-zA-Z0-9]/g, "")}Agent
-{
-    private readonly HttpClient _httpClient;
-    private readonly string _apiBase = "${window.location.origin}/api";
-    private readonly string _agentId = "${agentId}";
-
-    public ${agentName.replace(/[^a-zA-Z0-9]/g, "")}Agent(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
-    }
-
-    public async Task<RetrieveResponse> RetrieveAsync(Message[] messages)
-    {
-        var url = $"{_apiBase}/agents/{_agentId}/retrieve";
-        
-        var request = new RetrieveRequest
-        {
-            Messages = messages
-        };
-
-        var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-        
-        var response = await _httpClient.PostAsync(url, content);
-        response.EnsureSuccessStatusCode();
-        
-        var responseJson = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<RetrieveResponse>(responseJson, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        }) ?? new RetrieveResponse();
-    }
-}
-
-// Example usage
-var httpClient = new HttpClient();
-var agent = new ${agentName.replace(/[^a-zA-Z0-9]/g, "")}Agent(httpClient);
-
-try
-{
-    // ${conversationTitle} with ${agentName} agent
-    var conversation = new[]
-    {${apiMessages.map(msg => `
-        new Message
-        {
-            Role = "${msg.role}",
-            Content = new[] { ${msg.content.map(c => `new MessageContent { Type = "${c.type}", Text = ${JSON.stringify(c.type === 'text' ? c.text : '[BASE64_IMAGE_DATA]')} }`).join(', ')} }
-        }`).join(',')}
-    };
-
-    var result = await agent.RetrieveAsync(conversation);
-    
-    // Parse response
-    if (result.Response?.Length > 0 && result.Response[0].Content?.Length > 0)
-    {
-        Console.WriteLine($"Response: {result.Response[0].Content[0].Text}");
-    }
-    
-    // Show references and activity
-    Console.WriteLine($"References: {result.References?.Length ?? 0}");
-    Console.WriteLine($"Search activities: {result.Activity?.Length ?? 0}");
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Error: {ex.Message}");
-}`
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -368,12 +314,9 @@ catch (Exception ex)
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-stroke-divider">
           <div>
-            <h2 className="text-lg font-semibold text-fg-default">View Code</h2>
+            <h2 className="text-lg font-semibold text-fg-default">Knowledge Agent Code Samples</h2>
             <p className="text-sm text-fg-muted">
-              {messages.length > 0 
-                ? `${conversationTitle} with ${agentName} agent`
-                : `Code examples for ${agentName} agent`
-              }
+              Minimal examples for retrieving from {agentName} agent
             </p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
@@ -384,47 +327,82 @@ catch (Exception ex)
         {/* Content */}
         <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
           <div className="space-y-4">
+            {/* Language selector and copy button */}
             <div className="flex items-center justify-between">
               <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="curl">cURL</SelectItem>
+                  <SelectItem value="curl">cURL (REST API)</SelectItem>
                   <SelectItem value="python">Python</SelectItem>
                   <SelectItem value="typescript">TypeScript</SelectItem>
+                  <SelectItem value="javascript">JavaScript</SelectItem>
+                  <SelectItem value="java">Java</SelectItem>
                   <SelectItem value="dotnet">.NET</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => copyCode(
-                  selectedLanguage === 'curl' ? curlCode :
-                  selectedLanguage === 'python' ? pythonCode :
-                  selectedLanguage === 'typescript' ? typescriptCode :
-                  dotnetCode, 
-                  selectedLanguage
-                )}
+                onClick={() => copyCode(getCodeSnippet(selectedLanguage), selectedLanguage)}
                 className="h-8"
               >
                 {copiedCode === selectedLanguage ? (
-                  <Checkmark20Regular className="h-3 w-3" />
+                  <>
+                    <Checkmark20Regular className="h-4 w-4 mr-2" />
+                    Copied!
+                  </>
                 ) : (
-                  <Copy20Regular className="h-3 w-3" />
+                  <>
+                    <Copy20Regular className="h-4 w-4 mr-2" />
+                    Copy code
+                  </>
                 )}
               </Button>
             </div>
-            
+
+            {/* SDK version info */}
+            <div className="bg-bg-subtle border border-stroke-divider rounded-md p-3">
+              <div className="text-xs text-fg-muted space-y-1">
+                <div className="font-medium text-fg-default mb-1">SDK Versions:</div>
+                {selectedLanguage === 'python' && <div>• Python: azure-search-documents==11.7.0b1</div>}
+                {selectedLanguage === 'typescript' && <div>• TypeScript: @azure/search-documents@12.0.0-beta.9</div>}
+                {selectedLanguage === 'javascript' && <div>• JavaScript: @azure/search-documents@12.0.0-beta.9</div>}
+                {selectedLanguage === 'java' && <div>• Java: com.azure:azure-search-documents:11.8.0-beta.1</div>}
+                {selectedLanguage === 'dotnet' && <div>• .NET: Azure.Search.Documents -Version 12.0.0-beta.8</div>}
+                {selectedLanguage === 'curl' && <div>• REST API: 2025-08-01-preview</div>}
+              </div>
+            </div>
+
+            {/* Code snippet */}
             <pre className="bg-bg-subtle border border-stroke-divider rounded-md p-4 text-xs text-fg-default overflow-x-auto">
-              <code>
-                {selectedLanguage === 'curl' && curlCode}
-                {selectedLanguage === 'python' && pythonCode}
-                {selectedLanguage === 'typescript' && typescriptCode}
-                {selectedLanguage === 'dotnet' && dotnetCode}
-              </code>
+              <code>{getCodeSnippet(selectedLanguage)}</code>
             </pre>
+
+            {/* Documentation link */}
+            <div className="bg-accent-subtle border border-accent rounded-md p-3">
+              <div className="text-sm text-fg-default">
+                <strong>📚 Documentation:</strong>
+                <a
+                  href="https://learn.microsoft.com/en-us/azure/search/search-get-started-agentic-retrieval"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-2 text-accent hover:underline"
+                >
+                  Quickstart: Agentic Retrieval in Azure AI Search
+                </a>
+              </div>
+            </div>
+
+            {/* Additional notes */}
+            <div className="text-xs text-fg-muted space-y-1">
+              <div className="font-medium">Remember to:</div>
+              <div>• Replace {'{search-service}'} with your Azure AI Search service name</div>
+              <div>• Replace {'{search-admin-api-key}'} with your API key</div>
+              <div>• Ensure your agent ID is correct: <code className="bg-bg-subtle px-1">{agentId}</code></div>
+            </div>
           </div>
         </div>
       </div>

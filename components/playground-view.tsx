@@ -275,10 +275,10 @@ export function PlaygroundView() {
     }
     const azureMessages = [
       ...await Promise.all(messages.map(async (m) => ({
-        role: m.role,
+        role: m.role as 'user' | 'assistant' | 'system',
         content: await Promise.all(m.content.map(convertContent))
       })) ),
-      { role: 'user', content: await Promise.all(contentParts.map(convertContent)) }
+      { role: 'user' as const, content: await Promise.all(contentParts.map(convertContent)) }
     ]
     try {
       const response = await retrieveFromAgent(selectedAgent.id, azureMessages, runtimeSettings)
