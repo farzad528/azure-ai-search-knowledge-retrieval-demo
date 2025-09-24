@@ -44,7 +44,19 @@ export default function KnowledgeAgentsPage() {
         fetchAgents(),
         fetchKnowledgeSources()
       ])
-      setAgents(agentsData.value || [])
+
+      // Map API response to KnowledgeAgent type
+      const mappedAgents = (agentsData.value || []).map((agent: any) => ({
+        id: agent.name,
+        name: agent.name,
+        model: agent.models?.[0]?.azureOpenAIParameters?.modelName,
+        sources: (agent.knowledgeSources || []).map((ks: any) => ks.name),
+        status: 'active',
+        lastRun: null,
+        createdBy: null
+      }))
+
+      setAgents(mappedAgents)
       setKnowledgeSources(sourcesData.value || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data')

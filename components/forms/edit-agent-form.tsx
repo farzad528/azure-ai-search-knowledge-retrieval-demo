@@ -18,15 +18,15 @@ import { cn } from '@/lib/utils'
 interface AgentData {
   name: string
   description?: string
-  knowledgeSources: Array<{
+  knowledgeSources?: Array<{
     name: string
-    includeReferences: boolean
+    includeReferences?: boolean
     includeReferenceSourceData?: boolean | null
     alwaysQuerySource?: boolean | null
     maxSubQueries?: number | null
     rerankerThreshold?: number | null
   }>
-  models: Array<{
+  models?: Array<{
     kind: string
     azureOpenAIParameters?: {
       resourceUri: string
