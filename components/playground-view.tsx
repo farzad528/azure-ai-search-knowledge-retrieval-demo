@@ -32,6 +32,14 @@ type KnowledgeAgent = {
   status?: string
   outputConfiguration?: { modality?: string; answerInstructions?: string }
   retrievalInstructions?: string
+  knowledgeSources?: Array<{
+    name: string
+    includeReferences?: boolean
+    includeReferenceSourceData?: boolean | null
+    alwaysQuerySource?: boolean | null
+    maxSubQueries?: number | null
+    rerankerThreshold?: number | null
+  }>
 }
 
 type MessageContent = 
@@ -131,7 +139,8 @@ export function PlaygroundView() {
           status: 'active',
           description: agent.description,
           outputConfiguration: agent.outputConfiguration,
-          retrievalInstructions: agent.retrievalInstructions
+          retrievalInstructions: agent.retrievalInstructions,
+          knowledgeSources: agent.knowledgeSources
         }))
         
         setAgents(agentsList)
@@ -641,7 +650,7 @@ export function PlaygroundView() {
             </div>
           ) : (
             messages.map((message) => (
-              <MessageBubble key={message.id} message={message} onOpenDocument={(url) => setDocViewerUrl(url)} />
+              <MessageBubble key={message.id} message={message} onOpenDocument={(url) => setDocViewerUrl(url)} agent={selectedAgent} />
             ))
           )}
           
@@ -826,8 +835,11 @@ export function PlaygroundView() {
   )
 }
 
-function MessageBubble({ message, onOpenDocument }: { message: Message, onOpenDocument?: (url: string) => void }) {
+function MessageBubble({ message, onOpenDocument, agent }: { message: Message, onOpenDocument?: (url: string) => void, agent?: KnowledgeAgent }) {
   const [expanded, setExpanded] = useState(false)
+  
+  // Check if any knowledge source has includeReferenceSourceData enabled
+  const shouldShowSnippets = agent?.knowledgeSources?.some(ks => ks.includeReferenceSourceData === true)
   const isUser = message.role === 'user'
 
   return (
@@ -944,6 +956,30 @@ function MessageBubble({ message, onOpenDocument }: { message: Message, onOpenDo
                                   <span className="truncate max-w-[240px] inline-block align-bottom">{fileName}</span>
                                 </span>
                               </p>
+                              
+                              {/* Show snippet if includeReferenceSourceData is enabled and snippet is available */}
+                              {shouldShowSnippets && ref.sourceData?.snippet && (
+                                <div className="mt-3 pt-3 border-t border-stroke-divider">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <div className="text-[10px] font-medium text-fg-muted uppercase tracking-wide">
+                                      Source snippet
+                                    </div>
+                                    <div className="flex-1 h-px bg-stroke-divider"></div>
+                                  </div>
+                                  <div className="text-xs text-fg-default bg-bg-default/30 border border-stroke-divider rounded p-3 max-h-40 overflow-y-auto">
+                                    <div className="whitespace-pre-wrap leading-relaxed text-fg-muted">
+                                      {ref.sourceData.snippet}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Show hint if snippets are available but feature is not enabled */}
+                              {!shouldShowSnippets && ref.sourceData?.snippet && (
+                                <div className="mt-2 text-[10px] text-fg-muted/60 italic">
+                                  💡 Enable "Include source data" in agent settings to show snippets
+                                </div>
+                              )}
                             </div>
                           )
                         })}

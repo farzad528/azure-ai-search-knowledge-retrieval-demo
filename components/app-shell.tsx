@@ -12,7 +12,8 @@ import {
   ChartMultiple20Regular, 
   Settings20Regular,
   Navigation20Regular,
-  Dismiss20Regular
+  Dismiss20Regular,
+  ArrowUpRight16Regular
 } from '@fluentui/react-icons'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -157,7 +158,42 @@ function Header({ onMenuClick }: HeaderProps) {
           </Link>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <a 
+            href="https://learn.microsoft.com/rest/api/searchservice/knowledge-agents?view=rest-searchservice-2025-08-01-preview" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-sm font-medium text-fg-default hover:text-accent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-stroke-focus rounded-sm px-1"
+          >
+            <span>API docs</span>
+            <ArrowUpRight16Regular className="h-3.5 w-3.5" />
+          </a>
+          
+          <Tooltip content="View on GitHub">
+            <a 
+              href="https://github.com/farzad528/azure-ai-search-knowledge-retrieval-demo" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm font-medium text-fg-default hover:text-accent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-stroke-focus rounded-sm px-1"
+            >
+              <span>Source</span>
+              <Image 
+                src="/icons/github-mark.svg" 
+                alt="GitHub" 
+                width={16} 
+                height={16} 
+                className="dark:hidden" 
+              />
+              <Image 
+                src="/icons/github-mark-white.svg" 
+                alt="GitHub" 
+                width={16} 
+                height={16} 
+                className="hidden dark:block" 
+              />
+            </a>
+          </Tooltip>
+          
           <ThemeToggle />
           <Button variant="ghost" size="icon" aria-label="Account settings">
             <div className="h-6 w-6 rounded-full bg-accent-muted flex items-center justify-center">
