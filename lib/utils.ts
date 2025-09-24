@@ -38,3 +38,31 @@ export function slugify(text: string): string {
     .replace(/^-+/, '')
     .replace(/-+$/, '')
 }
+
+/**
+ * Clean and format text for display by removing HTML markup, 
+ * normalizing whitespace, and handling common formatting issues
+ */
+export function cleanTextSnippet(text: string): string {
+  if (!text) return ''
+  
+  return text
+    // Remove HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Remove HTML entities (convert common ones, remove others)
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x?[a-fA-F0-9]+;/g, '') // Remove other HTML entities
+    .replace(/&[a-zA-Z0-9#]+;/g, '') // Remove remaining entities
+    // Normalize various types of whitespace and line breaks
+    .replace(/[\r\n]+/g, ' ') // Convert line breaks to spaces
+    .replace(/\s+/g, ' ') // Normalize multiple spaces
+    .replace(/\t/g, ' ') // Convert tabs to spaces
+    // Clean up common formatting artifacts
+    .replace(/\s*[•·▪▫]\s*/g, ' • ') // Normalize bullet points
+    .replace(/\s*-\s*/g, ' - ') // Normalize dashes
+    .trim()
+}

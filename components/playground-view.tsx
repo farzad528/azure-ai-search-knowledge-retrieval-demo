@@ -21,8 +21,7 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { fetchAgents, retrieveFromAgent } from '../lib/api'
 import { processImageFile, ProcessedImageResult } from '@/lib/imageProcessing'
 import { useConversationStarters } from '@/lib/conversationStarters'
-import { cn } from '@/lib/utils'
-import { formatRelativeTime } from '@/lib/utils'
+import { cn, formatRelativeTime, cleanTextSnippet } from '@/lib/utils'
 
 type KnowledgeAgent = {
   id: string
@@ -917,18 +916,19 @@ function MessageBubble({ message, onOpenDocument, agent }: { message: Message, o
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="mt-3 space-y-3 overflow-hidden"
+                    className="mt-3 space-y-3 overflow-hidden w-full"
                   >
                     {/* References */}
                     {message.references && message.references.length > 0 && (
-                      <div className="space-y-2">
+                      <div className="space-y-2 w-full">
                         <h6 className="text-xs font-medium text-fg-muted uppercase tracking-wide">References</h6>
                         {Array.from(new Map(message.references.map((r, idx) => [r.blobUrl || r.id, { r, idx }])).values()).map(({ r: ref, idx }) => {
                           const fileName = ref.blobUrl ? decodeURIComponent(ref.blobUrl.split('/').pop() || ref.id) : (ref.docKey || ref.id)
                           const activity = message.activity?.find(a => a.id === ref.activitySource)
                           const label = activity?.knowledgeSourceName || fileName
+                          
                           return (
-                            <div id={`ref-${message.id}-${idx}`} key={ref.id + (ref.blobUrl || '')} className="p-3 bg-bg-subtle rounded-md group border border-transparent hover:border-accent/40 transition">
+                            <div id={`ref-${message.id}-${idx}`} key={ref.id + (ref.blobUrl || '')} className="p-3 bg-bg-subtle rounded-md group border border-transparent hover:border-accent/40 transition w-full">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="flex items-center gap-1 text-xs font-medium text-accent">
                                   <SourceKindIcon kind={ref.type} size={14} variant="plain" />
@@ -959,16 +959,16 @@ function MessageBubble({ message, onOpenDocument, agent }: { message: Message, o
                               
                               {/* Show snippet if includeReferenceSourceData is enabled and snippet is available */}
                               {shouldShowSnippets && ref.sourceData?.snippet && (
-                                <div className="mt-3 pt-3 border-t border-stroke-divider">
+                                <div className="mt-3 pt-3 border-t border-stroke-divider w-full">
                                   <div className="flex items-center gap-2 mb-2">
                                     <div className="text-[10px] font-medium text-fg-muted uppercase tracking-wide">
                                       Source snippet
                                     </div>
                                     <div className="flex-1 h-px bg-stroke-divider"></div>
                                   </div>
-                                  <div className="text-xs text-fg-default bg-bg-default/30 border border-stroke-divider rounded p-3 max-h-40 overflow-y-auto">
-                                    <div className="whitespace-pre-wrap leading-relaxed text-fg-muted">
-                                      {ref.sourceData.snippet}
+                                  <div className="text-xs text-fg-default bg-bg-default/30 border border-stroke-divider rounded p-4 max-h-64 overflow-y-auto w-full">
+                                    <div className="leading-relaxed text-fg-muted break-words">
+                                      {cleanTextSnippet(ref.sourceData.snippet)}
                                     </div>
                                   </div>
                                 </div>
