@@ -30,11 +30,8 @@ interface NavItem {
 }
 
 const azureSearchNavigation: NavItem[] = [
-  { href: '/', label: 'Dashboard', icon: Home20Regular },
-  { href: '/knowledge-sources', label: 'Knowledge sources', icon: Database20Regular },
-  { href: '/knowledge-agents', label: 'Knowledge agents', icon: Bot20Regular },
-  { href: '/playground', label: 'Playground', icon: Play20Regular },
-  { href: '/agent-builder', label: 'Agent Builder', icon: Apps20Regular },
+  { href: '/knowledge-bases', label: 'Knowledge Bases', icon: Database20Regular },
+  { href: '/knowledge-sources', label: 'Knowledge Sources', icon: Database20Regular },
 ]
 
 const foundryNavigation: NavItem[] = [

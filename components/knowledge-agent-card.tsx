@@ -72,7 +72,7 @@ export function KnowledgeAgentCard({ agent }: KnowledgeAgentCardProps) {
           
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" asChild>
-              <Link href={`/knowledge-agents/${agent.id || agent.name}`}>
+              <Link href={`/knowledge-bases/${agent.id || agent.name}`}>
                 <Settings20Regular className="h-4 w-4" />
                 <span className="sr-only">Edit agent</span>
               </Link>

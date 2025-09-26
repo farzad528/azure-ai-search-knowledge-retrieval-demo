@@ -110,7 +110,7 @@ export default function AgentDetailPage() {
 
   const handleDeleteAgent = async () => {
     await deleteAgent(agentId)
-    router.push('/knowledge-agents')
+    router.push('/knowledge-bases')
   }
 
   if (loading) {
@@ -145,8 +145,8 @@ export default function AgentDetailPage() {
           icon: Play20Regular
         }}
         backButton={{
-          href: '/knowledge-agents',
-          label: 'Back to agents'
+          href: '/knowledge-bases',
+          label: 'Back to knowledge bases'
         }}
       />
 

@@ -27,10 +27,10 @@ export function PathRouter({ initialAgents, initialKnowledgeSources, initialErro
     }
   }, [selectedPath, router])
 
-  // For Azure AI Search path, redirect to knowledge page
+  // For Azure AI Search path, redirect to knowledge-bases page
   useEffect(() => {
     if (selectedPath === 'azure-ai-search') {
-      router.push('/knowledge')
+      router.push('/knowledge-bases')
     }
   }, [selectedPath, router])
 
