@@ -11,13 +11,17 @@ import {
   Play20Regular,
   Navigation20Regular,
   Dismiss20Regular,
-  ArrowUpRight16Regular
+  ArrowUpRight16Regular,
+  Apps20Regular,
+  People20Regular,
+  Home20Regular
 } from '@fluentui/react-icons'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Tooltip } from '@/components/ui/tooltip'
 import Image from 'next/image'
+import { usePath } from '@/lib/path-context'
 
 interface NavItem {
   href: string
@@ -25,11 +29,18 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
 }
 
-const navigation: NavItem[] = [
-  { href: '/', label: 'Dashboard', icon: Search20Regular },
+const azureSearchNavigation: NavItem[] = [
+  { href: '/', label: 'Dashboard', icon: Home20Regular },
   { href: '/knowledge-sources', label: 'Knowledge sources', icon: Database20Regular },
   { href: '/knowledge-agents', label: 'Knowledge agents', icon: Bot20Regular },
   { href: '/playground', label: 'Playground', icon: Play20Regular },
+  { href: '/agent-builder', label: 'Agent Builder', icon: Apps20Regular },
+]
+
+const foundryNavigation: NavItem[] = [
+  { href: '/', label: 'Dashboard', icon: Home20Regular },
+  { href: '/agents', label: 'Agents', icon: Bot20Regular },
+  { href: '/knowledge', label: 'Knowledge', icon: Database20Regular },
 ]
 
 interface AppShellProps {
@@ -40,6 +51,10 @@ export function AppShell({ children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const [collapsed, setCollapsed] = React.useState(false)
   const pathname = usePathname()
+  const { selectedPath, setSelectedPath } = usePath()
+
+  // Get navigation items based on selected path
+  const navigation = selectedPath === 'foundry-agent-service' ? foundryNavigation : azureSearchNavigation
 
   // Load persisted collapse state
   React.useEffect(() => {
@@ -69,6 +84,9 @@ export function AppShell({ children }: AppShellProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  // Don't show sidebar for landing page (when no path is selected)
+  const showSidebar = selectedPath !== null
+
   return (
     <div className="min-h-screen bg-bg-canvas">
       {/* Skip to content link */}
@@ -80,46 +98,54 @@ export function AppShell({ children }: AppShellProps) {
       </a>
 
       {/* Header */}
-      <Header onMenuClick={() => setSidebarOpen(true)} />
+      <Header onMenuClick={() => setSidebarOpen(true)} showSidebar={showSidebar} selectedPath={selectedPath} setSelectedPath={setSelectedPath} />
 
-  <div className="flex">
-        {/* Mobile sidebar overlay */}
-        <AnimatePresence>
-          {sidebarOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="fixed inset-0 z-40 md:hidden"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <div className="absolute inset-0 bg-black bg-opacity-50" />
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <div className="flex">
+        {showSidebar && (
+          <>
+            {/* Mobile sidebar overlay */}
+            <AnimatePresence>
+              {sidebarOpen && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="fixed inset-0 z-40 md:hidden"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <div className="absolute inset-0 bg-black bg-opacity-50" />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-        {/* Sidebar */}
-        <Sidebar
-          navigation={navigation}
-            currentPath={pathname}
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-            collapsed={collapsed}
-            onToggleCollapse={toggleCollapse}
-        />
+            {/* Sidebar */}
+            <Sidebar
+              navigation={navigation}
+              currentPath={pathname}
+              isOpen={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
+              collapsed={collapsed}
+              onToggleCollapse={toggleCollapse}
+            />
+          </>
+        )}
 
         {/* Main content */}
-        <main 
-          id="main-content" 
-          className={cn('flex-1 min-w-0 flex flex-col min-h-[calc(100vh-4rem)] transition-[margin] duration-200', collapsed ? 'md:ml-20' : 'md:ml-64')}
+        <main
+          id="main-content"
+          className={cn('flex-1 min-w-0 flex flex-col min-h-[calc(100vh-4rem)] transition-[margin] duration-200',
+            showSidebar && (collapsed ? 'md:ml-20' : 'md:ml-64')
+          )}
         >
-          <div className="flex-1 p-6 md:p-8">
+          <div className={cn('flex-1', showSidebar ? 'p-6 md:p-8' : '')}>
             {children}
           </div>
-          <footer className="border-t border-stroke-divider px-6 py-4 text-xs text-fg-muted flex items-center justify-center">
-            <span>Made with <span role="img" aria-label="love">❤️</span> by Azure AI Search Product Group</span>
-          </footer>
+          {showSidebar && (
+            <footer className="border-t border-stroke-divider px-6 py-4 text-xs text-fg-muted flex items-center justify-center">
+              <span>Made with <span role="img" aria-label="love">❤️</span> by Azure AI Search Product Group</span>
+            </footer>
+          )}
         </main>
       </div>
     </div>
@@ -128,23 +154,28 @@ export function AppShell({ children }: AppShellProps) {
 
 interface HeaderProps {
   onMenuClick: () => void
+  showSidebar: boolean
+  selectedPath: string | null
+  setSelectedPath: (path: any) => void
 }
 
-function Header({ onMenuClick }: HeaderProps) {
+function Header({ onMenuClick, showSidebar, selectedPath, setSelectedPath }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 border-b border-stroke-divider bg-bg-card/95 backdrop-blur-sm">
       <div className="flex h-16 items-center justify-between px-6">
   <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={onMenuClick}
-            aria-label="Open navigation menu"
-          >
-            <Navigation20Regular className="h-5 w-5" />
-          </Button>
-          
+          {showSidebar && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={onMenuClick}
+              aria-label="Open navigation menu"
+            >
+              <Navigation20Regular className="h-5 w-5" />
+            </Button>
+          )}
+
           <Link href="/" aria-label="Home" className="flex items-center gap-1.5 min-w-0 focus:outline-none focus:ring-2 focus:ring-stroke-focus rounded-sm">
             <Image src="/icons/search_icon.svg" alt="Azure AI Search" width={26} height={26} priority className="shrink-0" />
             <span className="font-semibold text-lg truncate max-w-[9rem] sm:max-w-none leading-tight">
@@ -152,6 +183,7 @@ function Header({ onMenuClick }: HeaderProps) {
               <span className="sm:hidden">Knowledge Retrieval</span>
             </span>
           </Link>
+
         </div>
 
         <div className="flex items-center gap-3">

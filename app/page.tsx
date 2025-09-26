@@ -1,4 +1,4 @@
-import { DashboardContainer } from '../components/dashboard-container'
+import { PathRouter } from '../components/path-router'
 
 async function fetchAzure(path: string) {
   const endpoint = process.env.AZURE_SEARCH_ENDPOINT
@@ -53,5 +53,5 @@ export default async function HomePage() {
     initialError = e?.message || 'Failed to load dashboard data'
   }
 
-  return <DashboardContainer initialAgents={initialAgents} initialKnowledgeSources={initialSources} initialError={initialError} />
+  return <PathRouter initialAgents={initialAgents} initialKnowledgeSources={initialSources} initialError={initialError} />
 }

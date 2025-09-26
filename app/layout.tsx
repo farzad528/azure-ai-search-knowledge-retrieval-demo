@@ -4,6 +4,7 @@ import './globals.css'
 import { AppShell } from '@/components/app-shell'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ToastProvider } from '@/components/ui/toast'
+import { PathProvider } from '@/lib/path-context'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -27,7 +28,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ToastProvider>
-            <AppShell>{children}</AppShell>
+            <PathProvider>
+              <AppShell>{children}</AppShell>
+            </PathProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>

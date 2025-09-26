@@ -181,3 +181,47 @@ export async function createAgent(agentData: Partial<Agent>): Promise<Agent> {
 
   return response.json()
 }
+
+export async function createKnowledgeSource(sourceData: any): Promise<any> {
+  const response = await fetch('/api/knowledge-sources', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(sourceData),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(errorData.error || 'Failed to create knowledge source')
+  }
+
+  return response.json()
+}
+
+export async function createFoundryAgent(agentData: any): Promise<any> {
+  const response = await fetch('/api/foundry/assistants', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(agentData),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(errorData.error || 'Failed to create Foundry agent')
+  }
+
+  return response.json()
+}
+
+export async function getKnowledgeSourceStatus(sourceId: string): Promise<any> {
+  const response = await fetch(`/api/knowledge-sources/${sourceId}/status`)
+
+  if (!response.ok) {
+    throw new Error('Failed to get knowledge source status')
+  }
+
+  return response.json()
+}
