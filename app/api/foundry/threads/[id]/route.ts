@@ -4,7 +4,7 @@ import { getFoundryBearerToken } from '@/lib/token-manager'
 const FOUNDRY_ENDPOINT = process.env.FOUNDRY_PROJECT_ENDPOINT
 const FOUNDRY_API_VERSION = '2025-05-01'
 
-export async function GET() {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Validate required environment variables
     if (!FOUNDRY_ENDPOINT) {
@@ -19,10 +19,12 @@ export async function GET() {
     // Get bearer token (auto-refreshed)
     const bearerToken = await getFoundryBearerToken()
 
-    console.log('Fetching Foundry threads list')
+    const threadId = params.id
 
-    const response = await fetch(`${FOUNDRY_ENDPOINT}/threads?api-version=${FOUNDRY_API_VERSION}`, {
-      method: 'GET',
+    console.log(`Deleting Foundry thread ${threadId}`)
+
+    const response = await fetch(`${FOUNDRY_ENDPOINT}/threads/${threadId}?api-version=${FOUNDRY_API_VERSION}`, {
+      method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${bearerToken}`,
         'Content-Type': 'application/json'
@@ -52,43 +54,12 @@ export async function GET() {
       )
     }
 
-    const result = await response.json()
-    console.log('Foundry threads fetched successfully')
-    return NextResponse.json(result)
+    console.log('Foundry thread deleted successfully:', threadId)
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error fetching Foundry threads:', error)
+    console.error('Error deleting Foundry thread:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const response = await fetch(`${FOUNDRY_ENDPOINT}/threads?api-version=${FOUNDRY_API_VERSION}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${bearerToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({})
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      return NextResponse.json(
-        { error: errorData.message || 'Failed to create thread' },
-        { status: response.status }
-      )
-    }
-
-    const result = await response.json()
-    return NextResponse.json(result)
-  } catch (error) {
-    console.error('Error creating thread:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
       { status: 500 }
     )
   }

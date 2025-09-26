@@ -14,11 +14,13 @@ import {
   Add20Regular,
   Chat20Regular,
   Settings20Regular,
-  Play20Regular
+  Play20Regular,
+  Delete20Regular
 } from '@fluentui/react-icons'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { ConfirmationDialog } from '@/components/shared/confirmation-dialog'
 
 interface Agent {
   id: string
@@ -48,6 +50,9 @@ export default function AgentsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('my-agents')
+  const [deleteAgentDialog, setDeleteAgentDialog] = useState<{ open: boolean; agent: Agent | null }>({ open: false, agent: null })
+  const [deleteThreadDialog, setDeleteThreadDialog] = useState<{ open: boolean; thread: Thread | null }>({ open: false, thread: null })
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   // Fetch agents and threads from Foundry API
   useEffect(() => {
@@ -83,6 +88,52 @@ export default function AgentsPage() {
 
     fetchData()
   }, [])
+
+  const handleDeleteAgent = async (agent: Agent) => {
+    try {
+      setDeleteLoading(true)
+      const response = await fetch(`/api/foundry/assistants/${agent.id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete agent')
+      }
+
+      // Remove agent from local state
+      setAgents(prev => prev.filter(a => a.id !== agent.id))
+      // Clear selection if deleted agent was selected
+      if (selectedAgentId === agent.id) {
+        setSelectedAgentId(null)
+      }
+    } catch (err: any) {
+      console.error('Error deleting agent:', err)
+      setError(err.message || 'Failed to delete agent')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
+  const handleDeleteThread = async (thread: Thread) => {
+    try {
+      setDeleteLoading(true)
+      const response = await fetch(`/api/foundry/threads/${thread.id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete thread')
+      }
+
+      // Remove thread from local state
+      setThreads(prev => prev.filter(t => t.id !== thread.id))
+    } catch (err: any) {
+      console.error('Error deleting thread:', err)
+      setError(err.message || 'Failed to delete thread')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -133,14 +184,42 @@ export default function AgentsPage() {
             agents={agents}
             selectedAgentId={selectedAgentId}
             onSelectAgent={setSelectedAgentId}
+            onDeleteAgent={(agent) => setDeleteAgentDialog({ open: true, agent })}
             router={router}
           />
         </TabsContent>
 
         <TabsContent value="my-threads" className="space-y-6">
-          <MyThreadsTab threads={threads} />
+          <MyThreadsTab
+            threads={threads}
+            onDeleteThread={(thread) => setDeleteThreadDialog({ open: true, thread })}
+          />
         </TabsContent>
       </Tabs>
+
+      {/* Delete Agent Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteAgentDialog.open}
+        onOpenChange={(open) => setDeleteAgentDialog({ open, agent: null })}
+        title="Delete Agent"
+        description={`Are you sure you want to delete "${deleteAgentDialog.agent?.name}"? This action cannot be undone.`}
+        confirmText="Delete Agent"
+        variant="destructive"
+        loading={deleteLoading}
+        onConfirm={() => deleteAgentDialog.agent && handleDeleteAgent(deleteAgentDialog.agent)}
+      />
+
+      {/* Delete Thread Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteThreadDialog.open}
+        onOpenChange={(open) => setDeleteThreadDialog({ open, thread: null })}
+        title="Delete Thread"
+        description={`Are you sure you want to delete the thread "${deleteThreadDialog.thread?.title}"? This action cannot be undone and will delete all messages in this conversation.`}
+        confirmText="Delete Thread"
+        variant="destructive"
+        loading={deleteLoading}
+        onConfirm={() => deleteThreadDialog.thread && handleDeleteThread(deleteThreadDialog.thread)}
+      />
     </div>
   )
 }
@@ -149,10 +228,11 @@ interface MyAgentsTabProps {
   agents: Agent[]
   selectedAgentId: string | null
   onSelectAgent: (id: string | null) => void
+  onDeleteAgent: (agent: Agent) => void
   router: any
 }
 
-function MyAgentsTab({ agents, selectedAgentId, onSelectAgent, router }: MyAgentsTabProps) {
+function MyAgentsTab({ agents, selectedAgentId, onSelectAgent, onDeleteAgent, router }: MyAgentsTabProps) {
   if (agents.length === 0) {
     return (
       <EmptyState
@@ -180,6 +260,7 @@ function MyAgentsTab({ agents, selectedAgentId, onSelectAgent, router }: MyAgent
             agent={agent}
             isSelected={selectedAgentId === agent.id}
             onSelect={() => onSelectAgent(agent.id === selectedAgentId ? null : agent.id)}
+            onDelete={() => onDeleteAgent(agent)}
           />
         </motion.div>
       ))}
@@ -191,9 +272,10 @@ interface AgentCardProps {
   agent: Agent
   isSelected: boolean
   onSelect: () => void
+  onDelete: () => void
 }
 
-function AgentCard({ agent, isSelected, onSelect }: AgentCardProps) {
+function AgentCard({ agent, isSelected, onSelect, onDelete }: AgentCardProps) {
   return (
     <Card
       className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
@@ -214,7 +296,21 @@ function AgentCard({ agent, isSelected, onSelect }: AgentCardProps) {
               )}
             </div>
           </div>
-          <StatusPill status={agent.status} />
+          <div className="flex items-center gap-2">
+            <StatusPill status={agent.status} />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              className="h-8 w-8 text-fg-muted hover:text-destructive hover:bg-destructive/10"
+              title="Delete agent"
+            >
+              <Delete20Regular className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
@@ -254,9 +350,10 @@ function AgentCard({ agent, isSelected, onSelect }: AgentCardProps) {
 
 interface MyThreadsTabProps {
   threads: Thread[]
+  onDeleteThread: (thread: Thread) => void
 }
 
-function MyThreadsTab({ threads }: MyThreadsTabProps) {
+function MyThreadsTab({ threads, onDeleteThread }: MyThreadsTabProps) {
   if (threads.length === 0) {
     return (
       <EmptyState
@@ -276,7 +373,7 @@ function MyThreadsTab({ threads }: MyThreadsTabProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: index * 0.1 }}
         >
-          <ThreadCard thread={thread} />
+          <ThreadCard thread={thread} onDelete={() => onDeleteThread(thread)} />
         </motion.div>
       ))}
     </div>
@@ -285,9 +382,10 @@ function MyThreadsTab({ threads }: MyThreadsTabProps) {
 
 interface ThreadCardProps {
   thread: Thread
+  onDelete: () => void
 }
 
-function ThreadCard({ thread }: ThreadCardProps) {
+function ThreadCard({ thread, onDelete }: ThreadCardProps) {
   return (
     <Card className="cursor-pointer hover:shadow-md transition-all duration-200">
       <CardHeader className="pb-3">
@@ -296,8 +394,22 @@ function ThreadCard({ thread }: ThreadCardProps) {
             <CardTitle className="text-lg">{thread.title}</CardTitle>
             <CardDescription>Agent: {thread.agentName}</CardDescription>
           </div>
-          <div className="text-sm text-fg-muted">
-            {thread.messageCount} messages
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-fg-muted">
+              {thread.messageCount} messages
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              className="h-8 w-8 text-fg-muted hover:text-destructive hover:bg-destructive/10"
+              title="Delete thread"
+            >
+              <Delete20Regular className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </CardHeader>

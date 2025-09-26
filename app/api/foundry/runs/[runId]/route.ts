@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getFoundryBearerToken } from '@/lib/token-manager'
 
 const FOUNDRY_ENDPOINT = process.env.FOUNDRY_PROJECT_ENDPOINT
 const FOUNDRY_API_VERSION = '2025-05-01'
-const FOUNDRY_BEARER_TOKEN = process.env.FOUNDRY_BEARER_TOKEN
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { runId: string } }
 ) {
   try {
+    // Get bearer token (auto-refreshed)
+    const bearerToken = await getFoundryBearerToken()
+
     const { searchParams } = new URL(req.url)
     const threadId = searchParams.get('threadId')
 
@@ -22,7 +25,7 @@ export async function GET(
     const response = await fetch(`${FOUNDRY_ENDPOINT}/threads/${threadId}/runs/${params.runId}?api-version=${FOUNDRY_API_VERSION}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${FOUNDRY_BEARER_TOKEN}`
+        'Authorization': `Bearer ${bearerToken}`
       }
     })
 

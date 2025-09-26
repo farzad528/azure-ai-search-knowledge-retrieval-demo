@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getFoundryBearerToken } from '@/lib/token-manager'
 
 const FOUNDRY_ENDPOINT = process.env.FOUNDRY_PROJECT_ENDPOINT
 const FOUNDRY_API_VERSION = '2025-05-01'
-const FOUNDRY_BEARER_TOKEN = process.env.FOUNDRY_BEARER_TOKEN
 
 export async function GET() {
   try {
     // Validate required environment variables
-    if (!FOUNDRY_ENDPOINT || !FOUNDRY_BEARER_TOKEN) {
+    if (!FOUNDRY_ENDPOINT) {
       return NextResponse.json(
         {
-          error: 'Missing Foundry configuration. Please set FOUNDRY_PROJECT_ENDPOINT and FOUNDRY_BEARER_TOKEN in your .env file.',
-          details: 'Generate bearer token with: az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv'
+          error: 'Missing Foundry configuration. Please set FOUNDRY_PROJECT_ENDPOINT in your .env file.'
         },
         { status: 500 }
       )
     }
+
+    // Get bearer token (auto-refreshed)
+    const bearerToken = await getFoundryBearerToken()
 
     console.log('Fetching Foundry assistants list')
 
     const response = await fetch(`${FOUNDRY_ENDPOINT}/assistants?api-version=${FOUNDRY_API_VERSION}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${FOUNDRY_BEARER_TOKEN}`,
+        'Authorization': `Bearer ${bearerToken}`,
         'Content-Type': 'application/json'
       }
     })
@@ -65,15 +67,17 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     // Validate required environment variables
-    if (!FOUNDRY_ENDPOINT || !FOUNDRY_BEARER_TOKEN) {
+    if (!FOUNDRY_ENDPOINT) {
       return NextResponse.json(
         {
-          error: 'Missing Foundry configuration. Please set FOUNDRY_PROJECT_ENDPOINT and FOUNDRY_BEARER_TOKEN in your .env file.',
-          details: 'Generate bearer token with: az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv'
+          error: 'Missing Foundry configuration. Please set FOUNDRY_PROJECT_ENDPOINT in your .env file.'
         },
         { status: 500 }
       )
     }
+
+    // Get bearer token (auto-refreshed)
+    const bearerToken = await getFoundryBearerToken()
 
     const body = await req.json()
 
@@ -89,7 +93,7 @@ export async function POST(req: NextRequest) {
     const response = await fetch(`${FOUNDRY_ENDPOINT}/assistants?api-version=${FOUNDRY_API_VERSION}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${FOUNDRY_BEARER_TOKEN}`,
+        'Authorization': `Bearer ${bearerToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(foundryPayload)

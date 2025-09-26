@@ -22,14 +22,14 @@ export function PathRouter({ initialAgents, initialKnowledgeSources, initialErro
 
   // For Foundry Agent AI Service path, redirect directly to agents page
   useEffect(() => {
-    if (selectedPath === 'foundry') {
+    if (selectedPath === 'foundry-agent-service') {
       router.push('/agents')
     }
   }, [selectedPath, router])
 
   // For Azure AI Search path, redirect to knowledge page
   useEffect(() => {
-    if (selectedPath === 'search') {
+    if (selectedPath === 'azure-ai-search') {
       router.push('/knowledge')
     }
   }, [selectedPath, router])
