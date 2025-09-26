@@ -34,6 +34,7 @@ interface KnowledgeBase {
 }
 
 type Section = 'model' | 'tools' | 'instructions' | 'knowledge'
+type AgentMode = 'foundry' | 'search'
 
 const SECTIONS = [
   { id: 'model' as Section, label: 'Model', icon: Bot20Regular },
@@ -47,6 +48,7 @@ export default function AgentBuilderPage() {
   const searchParams = useSearchParams()
   const returnUrl = searchParams.get('returnUrl')
 
+  const [agentMode, setAgentMode] = useState<AgentMode | null>(null)
   const [activeSection, setActiveSection] = useState<Section>('model')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -595,8 +597,22 @@ export default function AgentBuilderPage() {
         <div className="w-80 bg-bg-secondary border-r border-stroke-divider flex flex-col">
           <div className="p-4 border-b border-stroke-divider">
             <h1 className="text-lg font-semibold">{agentName}</h1>
-            <p className="text-xs text-fg-muted mt-1">Assistant ID: {assistantId}</p>
-            <p className="text-xs text-fg-muted mt-1">Thread ID: {threadId}</p>
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-fg-muted">Assistant:</span>
+                <code className="text-xs bg-bg-tertiary px-2 py-0.5 rounded font-mono">{assistantId}</code>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-fg-muted">Thread:</span>
+                <code className="text-xs bg-bg-tertiary px-2 py-0.5 rounded font-mono">{threadId}</code>
+              </div>
+              {runId && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-fg-muted">Run:</span>
+                  <code className="text-xs bg-bg-tertiary px-2 py-0.5 rounded font-mono">{runId}</code>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Thread Management */}
@@ -815,12 +831,118 @@ export default function AgentBuilderPage() {
     )
   }
 
+  // Mode selection screen
+  if (!agentMode) {
+    return (
+      <div className="min-h-screen bg-bg-primary flex items-center justify-center p-8">
+        <div className="max-w-4xl w-full">
+          <div className="text-center mb-8">
+            <Bot20Regular className="h-12 w-12 mx-auto mb-4 text-fg-accent" />
+            <h1 className="text-2xl font-bold mb-2">Choose Your Agent Path</h1>
+            <p className="text-fg-muted">Select how you want to build and deploy your agent</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Foundry Agent Path */}
+            <Card
+              className="p-6 cursor-pointer border-2 hover:border-stroke-accent transition-all"
+              onClick={() => setAgentMode('foundry')}
+            >
+              <div className="mb-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-bg-accent-subtle flex items-center justify-center">
+                    <Bot20Regular className="h-6 w-6 text-fg-accent" />
+                  </div>
+                  <h2 className="text-lg font-semibold">Foundry Agent Service</h2>
+                </div>
+                <p className="text-sm text-fg-muted mb-4">
+                  Build agents using Azure AI Foundry with MCP integration
+                </p>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
+                  <span>Assistant & Thread management</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
+                  <span>Run tracking with Run IDs</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
+                  <span>MCP tool integration</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
+                  <span>Knowledge base connections</span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-stroke-divider">
+                <p className="text-xs text-fg-muted">Recommended for production deployments</p>
+              </div>
+            </Card>
+
+            {/* Azure AI Search Path */}
+            <Card
+              className="p-6 cursor-pointer border-2 hover:border-stroke-accent transition-all"
+              onClick={() => setAgentMode('search')}
+            >
+              <div className="mb-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-bg-accent-subtle flex items-center justify-center">
+                    <Database20Regular className="h-6 w-6 text-fg-accent" />
+                  </div>
+                  <h2 className="text-lg font-semibold">Azure AI Search</h2>
+                </div>
+                <p className="text-sm text-fg-muted mb-4">
+                  Direct integration with Azure AI Search indexes
+                </p>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
+                  <span>Direct search queries</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
+                  <span>Vector & hybrid search</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
+                  <span>Semantic ranking</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
+                  <span>Simple REST API</span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-stroke-divider">
+                <p className="text-xs text-fg-muted">Best for search-focused applications</p>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen bg-bg-primary">
       {/* Left Navigation */}
       <div className="w-64 bg-bg-secondary border-r border-stroke-divider flex flex-col">
         <div className="p-4 border-b border-stroke-divider">
-          <h1 className="text-lg font-semibold">Agent Builder</h1>
+          <div className="flex items-center gap-2 mb-3">
+            <h1 className="text-lg font-semibold">Agent Builder</h1>
+            <div className="ml-auto">
+              <span className="text-xs px-2 py-1 rounded bg-bg-accent-subtle text-fg-accent font-medium">
+                {agentMode === 'foundry' ? 'Foundry' : 'Search'}
+              </span>
+            </div>
+          </div>
           <Input
             value={agentName}
             onChange={(e) => setAgentName(e.target.value)}
@@ -858,32 +980,51 @@ export default function AgentBuilderPage() {
         </nav>
 
         <div className="p-4 border-t border-stroke-divider space-y-2">
-          <Button
-            className="w-full"
-            onClick={handleSaveAgent}
-            disabled={saving || selectedKnowledgeBases.size === 0}
-          >
-            {saving ? 'Creating agent...' : 'Create agent'}
-          </Button>
-          <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1">
-              Save as draft
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1"
-              onClick={() => setShowCodeModal(true)}
-              disabled={selectedKnowledgeBases.size === 0}
-            >
-              <CodeText20Regular className="h-4 w-4" />
-              Code
-            </Button>
-          </div>
-          {selectedKnowledgeBases.size === 0 && (
-            <p className="text-xs text-fg-muted mt-2 text-center">
-              Select knowledge bases to enable creation
-            </p>
+          {agentMode === 'foundry' ? (
+            <>
+              <Button
+                className="w-full"
+                onClick={handleSaveAgent}
+                disabled={saving || selectedKnowledgeBases.size === 0}
+              >
+                {saving ? 'Creating agent...' : 'Create Foundry Agent'}
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="secondary" className="flex-1">
+                  Save as draft
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => setShowCodeModal(true)}
+                  disabled={selectedKnowledgeBases.size === 0}
+                >
+                  <CodeText20Regular className="h-4 w-4" />
+                  Code
+                </Button>
+              </div>
+              {selectedKnowledgeBases.size === 0 && (
+                <p className="text-xs text-fg-muted mt-2 text-center">
+                  Select knowledge bases to enable agent creation
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <Button
+                className="w-full"
+                onClick={() => alert('Azure AI Search agent creation - Coming soon!')}
+              >
+                Create Search Agent
+              </Button>
+              <Button variant="secondary" className="w-full">
+                Configure Index
+              </Button>
+              <p className="text-xs text-fg-muted mt-2 text-center">
+                Direct search integration mode
+              </p>
+            </>
           )}
         </div>
       </div>
