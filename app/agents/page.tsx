@@ -141,7 +141,6 @@ export default function AgentsPage() {
         <PageHeader
           title="Agents"
           description="Manage your Foundry agents and chat threads"
-          icon={Bot20Regular}
         />
         <LoadingSkeleton />
       </div>
@@ -154,9 +153,8 @@ export default function AgentsPage() {
         <PageHeader
           title="Agents"
           description="Manage your Foundry agents and chat threads"
-          icon={Bot20Regular}
         />
-        <ErrorState message={error} />
+        <ErrorState title="Error loading agents" description={error} />
       </div>
     )
   }
@@ -297,7 +295,9 @@ function AgentCard({ agent, isSelected, onSelect, onDelete }: AgentCardProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <StatusPill status={agent.status} />
+            <StatusPill variant={agent.status === 'active' ? 'success' : agent.status === 'error' ? 'danger' : 'neutral'}>
+              {agent.status}
+            </StatusPill>
             <Button
               variant="ghost"
               size="icon"

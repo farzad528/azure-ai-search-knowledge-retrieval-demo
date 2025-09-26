@@ -3,7 +3,7 @@
 import { useCallback, useEffect } from 'react';
 import { useTour } from './tour-provider';
 
-interface AnalyticsEvent {
+export interface AnalyticsEvent {
   event: string;
   properties: Record<string, any>;
   timestamp: string;
@@ -11,7 +11,7 @@ interface AnalyticsEvent {
   sessionId?: string;
 }
 
-interface AnalyticsConfig {
+export interface AnalyticsConfig {
   enabled: boolean;
   endpoint?: string;
   batchSize: number;

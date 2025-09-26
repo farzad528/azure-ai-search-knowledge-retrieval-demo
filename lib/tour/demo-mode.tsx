@@ -190,7 +190,7 @@ export function useDemoMode() {
     console.log('Demo data cleared');
   };
 
-  const getDemoData = <T>(key: string): T | null => {
+  const getDemoData = <T,>(key: string): T | null => {
     if (!isDemoMode) return null;
 
     const data = localStorage.getItem(`demo_${key}`);

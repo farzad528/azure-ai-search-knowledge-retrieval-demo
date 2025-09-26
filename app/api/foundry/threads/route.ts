@@ -66,6 +66,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    // Get bearer token (auto-refreshed)
+    const bearerToken = await getFoundryBearerToken()
+
     const response = await fetch(`${FOUNDRY_ENDPOINT}/threads?api-version=${FOUNDRY_API_VERSION}`, {
       method: 'POST',
       headers: {

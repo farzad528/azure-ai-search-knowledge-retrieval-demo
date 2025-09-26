@@ -72,7 +72,6 @@ export default function KnowledgePage() {
         <PageHeader
           title="Knowledge"
           description="Manage knowledge bases for your agents"
-          icon={Database20Regular}
         />
         <LoadingSkeleton />
       </div>
@@ -85,9 +84,8 @@ export default function KnowledgePage() {
         <PageHeader
           title="Knowledge"
           description="Manage knowledge bases for your agents"
-          icon={Database20Regular}
         />
-        <ErrorState message={error} />
+        <ErrorState title="Error loading knowledge bases" description={error} />
       </div>
     )
   }
@@ -97,15 +95,11 @@ export default function KnowledgePage() {
       <PageHeader
         title="Knowledge"
         description="Manage knowledge bases for your agents"
-        icon={Database20Regular}
-        action={
-          <Button asChild>
-            <Link href="/knowledge/create">
-              <Add20Regular className="h-4 w-4 mr-2" />
-              Create Knowledge Base
-            </Link>
-          </Button>
-        }
+        primaryAction={{
+          label: "Create Knowledge Base",
+          href: "/knowledge/create",
+          icon: Add20Regular
+        }}
       />
 
       {knowledgeBases.length === 0 ? (
@@ -113,14 +107,10 @@ export default function KnowledgePage() {
           icon={Database20Regular}
           title="No knowledge bases found"
           description="Create your first knowledge base to provide context for your agents"
-          action={
-            <Button asChild>
-              <Link href="/knowledge/create">
-                <Add20Regular className="h-4 w-4 mr-2" />
-                Create Knowledge Base
-              </Link>
-            </Button>
-          }
+          action={{
+            label: "Create Knowledge Base",
+            onClick: () => window.location.href = "/knowledge/create"
+          }}
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -162,10 +152,9 @@ function KnowledgeBaseCard({ knowledgeBase }: KnowledgeBaseCardProps) {
               )}
             </div>
           </div>
-          <StatusPill
-            status={knowledgeBase.status}
-            variant={knowledgeBase.status === 'healthy' ? 'success' : 'default'}
-          />
+          <StatusPill variant={knowledgeBase.status === 'healthy' ? 'success' : knowledgeBase.status === 'error' ? 'danger' : 'neutral'}>
+            {knowledgeBase.status}
+          </StatusPill>
         </div>
       </CardHeader>
 

@@ -226,7 +226,7 @@ export function TourProvider({
   const markStepComplete = useCallback((stepId: string) => {
     setState(prev => ({
       ...prev,
-      completedSteps: new Set([...prev.completedSteps, stepId]),
+      completedSteps: new Set(Array.from(prev.completedSteps).concat(stepId)),
     }));
   }, []);
 

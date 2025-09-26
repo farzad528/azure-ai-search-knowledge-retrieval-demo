@@ -50,7 +50,7 @@ export function Coachmark({
   const [coachmarkPosition, setCoachmarkPosition] = useState({ x: 0, y: 0 });
   const [mounted, setMounted] = useState(false);
   const coachmarkRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     setMounted(true);

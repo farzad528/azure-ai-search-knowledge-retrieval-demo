@@ -27,7 +27,7 @@ export function Spotlight({
 }: SpotlightProps) {
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [mounted, setMounted] = useState(false);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     setMounted(true);

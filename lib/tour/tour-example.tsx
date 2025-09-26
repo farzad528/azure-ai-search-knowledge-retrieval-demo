@@ -192,7 +192,7 @@ function ExampleAppLayout() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {metrics?.searchQueries || '1,247'}
+                {(metrics as any)?.searchQueries || '1,247'}
               </div>
               <p className="text-xs text-muted-foreground">
                 Total queries this month
@@ -210,12 +210,12 @@ function ExampleAppLayout() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {metrics?.activeUsers || '89'}
+                {(metrics as any)?.activeUsers || '89'}
               </div>
               <p className="text-xs text-muted-foreground">
                 Users online now
               </p>
-              {users && users.length > 0 && (
+              {users && Array.isArray(users) && users.length > 0 && (
                 <div className="flex -space-x-2 mt-2">
                   {users.slice(0, 3).map((user: any) => (
                     <div
