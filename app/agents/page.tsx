@@ -17,6 +17,7 @@ import {
   Play20Regular
 } from '@fluentui/react-icons'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 
 interface Agent {
@@ -40,6 +41,7 @@ interface Thread {
 }
 
 export default function AgentsPage() {
+  const router = useRouter()
   const [agents, setAgents] = useState<Agent[]>([])
   const [threads, setThreads] = useState<Thread[]>([])
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null)
@@ -113,13 +115,11 @@ export default function AgentsPage() {
       <PageHeader
         title="Agents"
         description="Manage your Foundry agents and chat threads"
-        icon={Bot20Regular}
-        action={
-          <Button>
-            <Add20Regular className="h-4 w-4 mr-2" />
-            Create Agent
-          </Button>
-        }
+        primaryAction={{
+          label: "Create Agent",
+          href: "/agent-builder",
+          icon: Add20Regular
+        }}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -133,6 +133,7 @@ export default function AgentsPage() {
             agents={agents}
             selectedAgentId={selectedAgentId}
             onSelectAgent={setSelectedAgentId}
+            router={router}
           />
         </TabsContent>
 
@@ -148,21 +149,20 @@ interface MyAgentsTabProps {
   agents: Agent[]
   selectedAgentId: string | null
   onSelectAgent: (id: string | null) => void
+  router: any
 }
 
-function MyAgentsTab({ agents, selectedAgentId, onSelectAgent }: MyAgentsTabProps) {
+function MyAgentsTab({ agents, selectedAgentId, onSelectAgent, router }: MyAgentsTabProps) {
   if (agents.length === 0) {
     return (
       <EmptyState
         icon={Bot20Regular}
         title="No agents found"
         description="Create your first Foundry agent to get started"
-        action={
-          <Button>
-            <Add20Regular className="h-4 w-4 mr-2" />
-            Create Agent
-          </Button>
-        }
+        action={{
+          label: "Create Agent",
+          onClick: () => router.push('/agent-builder')
+        }}
       />
     )
   }
@@ -239,16 +239,10 @@ function AgentCard({ agent, isSelected, onSelect }: AgentCardProps) {
             transition={{ duration: 0.2 }}
             className="flex gap-2 pt-3 border-t border-stroke-divider"
           >
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/agent-builder?id=${agent.id}`}>
-                <Settings20Regular className="h-4 w-4 mr-2" />
-                Configure
-              </Link>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/playground/${agent.id}`}>
+            <Button variant="outline" size="sm" asChild className="flex-1">
+              <Link href={`/agent-builder?assistantId=${agent.id}&mode=playground`}>
                 <Play20Regular className="h-4 w-4 mr-2" />
-                Test
+                Try in Playground
               </Link>
             </Button>
           </motion.div>

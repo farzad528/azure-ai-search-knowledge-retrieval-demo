@@ -38,7 +38,6 @@ const azureSearchNavigation: NavItem[] = [
 ]
 
 const foundryNavigation: NavItem[] = [
-  { href: '/', label: 'Dashboard', icon: Home20Regular },
   { href: '/agents', label: 'Agents', icon: Bot20Regular },
   { href: '/knowledge', label: 'Knowledge', icon: Database20Regular },
 ]

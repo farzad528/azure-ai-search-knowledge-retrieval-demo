@@ -47,15 +47,17 @@ export default function AgentBuilderPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnUrl = searchParams.get('returnUrl')
+  const existingAssistantId = searchParams.get('assistantId')
+  const mode = searchParams.get('mode')
 
-  const [agentMode, setAgentMode] = useState<AgentMode | null>(null)
+  const [agentMode, setAgentMode] = useState<AgentMode | null>('foundry')
   const [activeSection, setActiveSection] = useState<Section>('model')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   // Agent configuration
-  const [agentName, setAgentName] = useState('Healthcare Assistant')
-  const [agentInstructions, setAgentInstructions] = useState('You are a medical information assistant that answers questions about medications, drug interactions, and clinical guidelines.')
+  const [agentName, setAgentName] = useState(`agent-${Date.now()}`)
+  const [agentInstructions, setAgentInstructions] = useState('You are a helpful AI assistant. Answer questions clearly and accurately based on the available knowledge sources.')
   const [selectedModel, setSelectedModel] = useState('gpt-4.1')
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([])
   const [selectedKnowledgeBases, setSelectedKnowledgeBases] = useState<Set<string>>(new Set())
@@ -66,7 +68,7 @@ export default function AgentBuilderPage() {
   })
 
   // Foundry agent state
-  const [assistantId, setAssistantId] = useState<string | null>(null)
+  const [assistantId, setAssistantId] = useState<string | null>(existingAssistantId || null)
   const [threadId, setThreadId] = useState<string | null>(null)
   const [runId, setRunId] = useState<string | null>(null)
   const [messages, setMessages] = useState<any[]>([])
@@ -79,18 +81,67 @@ export default function AgentBuilderPage() {
 
   useEffect(() => {
     loadKnowledgeBases()
-  }, [])
+
+    // If we have an existing assistant ID (playground mode), load assistant details and create a thread
+    if (existingAssistantId && mode === 'playground') {
+      loadExistingAssistantDetails()
+      createThread().then(thread => {
+        setThreadId(thread.id)
+        setThreads([{
+          id: thread.id,
+          created_at: new Date().toISOString(),
+          messages: []
+        }])
+      }).catch(err => {
+        console.error('Failed to create thread for existing assistant:', err)
+      })
+    }
+  }, [existingAssistantId, mode])
+
+  const loadExistingAssistantDetails = async () => {
+    if (!existingAssistantId) return
+
+    try {
+      const response = await fetch(`/api/foundry/assistants/${existingAssistantId}`)
+      if (response.ok) {
+        const assistant = await response.json()
+        console.log('Loaded existing assistant:', assistant)
+
+        // Update agent details
+        if (assistant.name) setAgentName(assistant.name)
+        if (assistant.instructions) setAgentInstructions(assistant.instructions)
+        if (assistant.model) setSelectedModel(assistant.model)
+
+        // Extract knowledge bases from MCP tools
+        if (assistant.tools) {
+          const mcpTools = assistant.tools.filter(tool => tool.type === 'mcp')
+          const kbNames = mcpTools.map(tool => {
+            // Extract knowledge base name from server_label or server_url
+            if (tool.server_label) {
+              return tool.server_label.replace(/_/g, '-')
+            }
+            // Fallback: extract from URL
+            const urlMatch = tool.server_url?.match(/\/agents\/([^\/]+)\/mcp/)
+            return urlMatch ? urlMatch[1] : null
+          }).filter(Boolean)
+
+          setSelectedKnowledgeBases(new Set(kbNames))
+        }
+      } else {
+        console.error('Failed to load existing assistant details')
+      }
+    } catch (err) {
+      console.error('Error loading existing assistant details:', err)
+    }
+  }
 
   const loadKnowledgeBases = async () => {
     try {
       setLoading(true)
       const data = await fetchAgents()
       setKnowledgeBases(data.value || [])
-      // Auto-select some knowledge bases for demo
-      const healthcareBases = (data.value || []).filter((agent: KnowledgeBase) =>
-        agent.name.includes('healthcare') || agent.name.includes('health')
-      )
-      setSelectedKnowledgeBases(new Set(healthcareBases.map((agent: KnowledgeBase) => agent.name)))
+      // Start with no knowledge bases selected by default
+      setSelectedKnowledgeBases(new Set())
     } catch (err) {
       console.error('Failed to load knowledge bases:', err)
     } finally {
@@ -150,13 +201,19 @@ export default function AgentBuilderPage() {
       setThreadId(thread.id)
 
       // Add to threads list
-      setThreads(prev => [{
+      setThreads([{
         id: thread.id,
         created_at: new Date().toISOString(),
         messages: []
-      }, ...prev])
+      }])
 
       console.log('Agent created successfully:', { assistantId: assistant.id, threadId: thread.id })
+
+      // Automatically transition to playground mode by updating URL
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.set('assistantId', assistant.id)
+      newUrl.searchParams.set('mode', 'playground')
+      window.history.replaceState({}, '', newUrl.toString())
 
     } catch (err) {
       console.error('Failed to create agent:', err)
@@ -353,6 +410,45 @@ export default function AgentBuilderPage() {
       }
     } catch (err) {
       console.error('Failed to delete thread:', err)
+    }
+  }
+
+  const updateAssistantDetails = async () => {
+    if (!assistantId) return
+
+    try {
+      // Build MCP tools from selected knowledge bases
+      const mcpTools = Array.from(selectedKnowledgeBases).map(baseName => {
+        // Replace dashes with underscores for server_label
+        const serverLabel = baseName.replace(/-/g, '_')
+
+        return {
+          type: 'mcp',
+          server_label: serverLabel,
+          server_url: `${process.env.NEXT_PUBLIC_SEARCH_ENDPOINT}/agents/${baseName}/mcp?api-version=${process.env.NEXT_PUBLIC_AZURE_SEARCH_API_VERSION || '2025-08-01-preview'}`,
+          allowed_tools: ['knowledge_agent_retrieve']
+        }
+      })
+
+      const response = await fetch(`/api/foundry/assistants/${assistantId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: agentName,
+          instructions: agentInstructions,
+          tools: mcpTools
+        })
+      })
+
+      if (response.ok) {
+        console.log('Assistant details updated successfully')
+      } else {
+        console.error('Failed to update assistant details')
+      }
+    } catch (err) {
+      console.error('Error updating assistant details:', err)
     }
   }
 
@@ -590,13 +686,18 @@ export default function AgentBuilderPage() {
   }
 
   // Show chat interface if agent is created
-  if (assistantId && threadId) {
+  if (assistantId) {
     return (
       <div className="flex h-screen bg-bg-primary">
         {/* Left Panel - Agent Info & Threads */}
         <div className="w-80 bg-bg-secondary border-r border-stroke-divider flex flex-col">
           <div className="p-4 border-b border-stroke-divider">
-            <h1 className="text-lg font-semibold">{agentName}</h1>
+            <input
+              value={agentName}
+              onChange={(e) => setAgentName(e.target.value)}
+              className="text-lg font-semibold bg-transparent border-0 focus:ring-1 focus:ring-stroke-focus rounded px-1 w-full"
+              placeholder="Agent name"
+            />
             <div className="mt-2 space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-fg-muted">Assistant:</span>
@@ -675,12 +776,67 @@ export default function AgentBuilderPage() {
             <div>
               <h3 className="text-sm font-semibold mb-2">Knowledge Bases</h3>
               <div className="space-y-2">
+                {/* Dropdown for adding knowledge bases */}
+                <div className="relative">
+                  <select
+                    className="w-full text-xs p-2 pr-8 border border-stroke-card rounded bg-bg-tertiary text-fg-primary appearance-none cursor-pointer hover:border-stroke-accent focus:outline-none focus:ring-1 focus:ring-stroke-focus"
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (value && value !== '') {
+                        handleKnowledgeBaseToggle(value)
+                      }
+                      // Reset dropdown to placeholder
+                      setTimeout(() => {
+                        e.target.value = ''
+                      }, 100)
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>
+                      + Add knowledge base
+                    </option>
+                    {knowledgeBases
+                      .filter(base => !selectedKnowledgeBases.has(base.name))
+                      .map((base) => (
+                        <option
+                          key={base.name}
+                          value={base.name}
+                        >
+                          {base.name}
+                        </option>
+                      ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                    <svg className="h-3 w-3 text-fg-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Selected knowledge bases */}
                 {Array.from(selectedKnowledgeBases).map(baseName => (
-                  <div key={baseName} className="text-xs p-2 bg-bg-tertiary rounded">
-                    <div className="font-medium">{baseName}</div>
-                    <div className="text-fg-muted">MCP Tool: {baseName.replace(/-/g, '_')}</div>
+                  <div key={baseName} className="flex items-center justify-between text-xs p-2 bg-bg-tertiary rounded">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{baseName}</div>
+                      <div className="text-fg-muted">MCP Tool: {baseName.replace(/-/g, '_')}</div>
+                    </div>
+                    <button
+                      onClick={() => handleKnowledgeBaseToggle(baseName)}
+                      className="ml-2 p-1 hover:bg-bg-hover rounded text-fg-muted hover:text-fg-default"
+                      title="Remove knowledge base"
+                    >
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
                 ))}
+
+                {selectedKnowledgeBases.size === 0 && (
+                  <div className="text-xs text-fg-muted text-center py-2">
+                    No knowledge bases selected
+                  </div>
+                )}
               </div>
             </div>
 
@@ -688,21 +844,46 @@ export default function AgentBuilderPage() {
               <h3 className="text-sm font-semibold mb-2">Model</h3>
               <p className="text-xs text-fg-muted">{selectedModel}</p>
             </div>
+
+            <div>
+              <h3 className="text-sm font-semibold mb-2">System Instructions</h3>
+              <div className="space-y-2">
+                <textarea
+                  value={agentInstructions}
+                  onChange={(e) => setAgentInstructions(e.target.value)}
+                  placeholder="Enter system instructions..."
+                  className="w-full text-xs p-2 bg-bg-tertiary rounded resize-none border-0 focus:ring-1 focus:ring-stroke-focus"
+                  rows={4}
+                />
+                <p className="text-xs text-fg-muted">
+                  {agentInstructions.length} characters
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="p-4 border-t border-stroke-divider">
             <Button
               variant="secondary"
               className="w-full"
-              onClick={() => {
-                setAssistantId(null)
-                setThreadId(null)
-                setRunId(null)
-                setMessages([])
-                setThreads([])
+              onClick={async () => {
+                // Save agent details before going back
+                await updateAssistantDetails()
+
+                if (mode === 'playground') {
+                  // If in playground mode, go back to agents
+                  router.push('/agents')
+                } else {
+                  // If in builder mode, reset state
+                  setAssistantId(null)
+                  setThreadId(null)
+                  setRunId(null)
+                  setMessages([])
+                  setThreads([])
+                }
               }}
             >
-              Back to Builder
+              {mode === 'playground' ? 'Back to Agents' : 'Back to Builder'}
             </Button>
           </div>
         </div>
@@ -831,104 +1012,6 @@ export default function AgentBuilderPage() {
     )
   }
 
-  // Mode selection screen
-  if (!agentMode) {
-    return (
-      <div className="min-h-screen bg-bg-primary flex items-center justify-center p-8">
-        <div className="max-w-4xl w-full">
-          <div className="text-center mb-8">
-            <Bot20Regular className="h-12 w-12 mx-auto mb-4 text-fg-accent" />
-            <h1 className="text-2xl font-bold mb-2">Choose Your Agent Path</h1>
-            <p className="text-fg-muted">Select how you want to build and deploy your agent</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Foundry Agent Path */}
-            <Card
-              className="p-6 cursor-pointer border-2 hover:border-stroke-accent transition-all"
-              onClick={() => setAgentMode('foundry')}
-            >
-              <div className="mb-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-bg-accent-subtle flex items-center justify-center">
-                    <Bot20Regular className="h-6 w-6 text-fg-accent" />
-                  </div>
-                  <h2 className="text-lg font-semibold">Foundry Agent Service</h2>
-                </div>
-                <p className="text-sm text-fg-muted mb-4">
-                  Build agents using Azure AI Foundry with MCP integration
-                </p>
-              </div>
-
-              <div className="space-y-2 text-sm">
-                <div className="flex items-start gap-2">
-                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Assistant & Thread management</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Run tracking with Run IDs</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>MCP tool integration</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Knowledge base connections</span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-stroke-divider">
-                <p className="text-xs text-fg-muted">Recommended for production deployments</p>
-              </div>
-            </Card>
-
-            {/* Azure AI Search Path */}
-            <Card
-              className="p-6 cursor-pointer border-2 hover:border-stroke-accent transition-all"
-              onClick={() => setAgentMode('search')}
-            >
-              <div className="mb-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-bg-accent-subtle flex items-center justify-center">
-                    <Database20Regular className="h-6 w-6 text-fg-accent" />
-                  </div>
-                  <h2 className="text-lg font-semibold">Azure AI Search</h2>
-                </div>
-                <p className="text-sm text-fg-muted mb-4">
-                  Direct integration with Azure AI Search indexes
-                </p>
-              </div>
-
-              <div className="space-y-2 text-sm">
-                <div className="flex items-start gap-2">
-                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Direct search queries</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Vector & hybrid search</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Semantic ranking</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckmarkCircle20Filled className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Simple REST API</span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-stroke-divider">
-                <p className="text-xs text-fg-muted">Best for search-focused applications</p>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="flex h-screen bg-bg-primary">
@@ -985,7 +1068,7 @@ export default function AgentBuilderPage() {
               <Button
                 className="w-full"
                 onClick={handleSaveAgent}
-                disabled={saving || selectedKnowledgeBases.size === 0}
+                disabled={saving}
               >
                 {saving ? 'Creating agent...' : 'Create Foundry Agent'}
               </Button>
@@ -998,17 +1081,14 @@ export default function AgentBuilderPage() {
                   size="sm"
                   className="gap-1"
                   onClick={() => setShowCodeModal(true)}
-                  disabled={selectedKnowledgeBases.size === 0}
                 >
                   <CodeText20Regular className="h-4 w-4" />
                   Code
                 </Button>
               </div>
-              {selectedKnowledgeBases.size === 0 && (
-                <p className="text-xs text-fg-muted mt-2 text-center">
-                  Select knowledge bases to enable agent creation
-                </p>
-              )}
+              <p className="text-xs text-fg-muted mt-2 text-center">
+                You can add knowledge bases after creating the agent
+              </p>
             </>
           ) : (
             <>
