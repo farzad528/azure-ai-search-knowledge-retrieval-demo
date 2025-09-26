@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { PathRouter } from '../components/path-router'
 
 async function fetchAzure(path: string) {

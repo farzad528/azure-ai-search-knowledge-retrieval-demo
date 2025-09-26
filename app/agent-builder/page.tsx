@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ChevronLeft20Regular,
@@ -43,7 +45,7 @@ const SECTIONS = [
   { id: 'knowledge' as Section, label: 'Knowledge', icon: Database20Regular },
 ]
 
-export default function AgentBuilderPage() {
+function AgentBuilderPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnUrl = searchParams.get('returnUrl')
@@ -1128,5 +1130,13 @@ export default function AgentBuilderPage() {
         threadId={threadId}
       />
     </div>
+  )
+}
+
+export default function AgentBuilderPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div>Loading...</div></div>}>
+      <AgentBuilderPageContent />
+    </Suspense>
   )
 }

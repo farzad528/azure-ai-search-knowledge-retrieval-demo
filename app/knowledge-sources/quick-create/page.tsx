@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronLeft20Regular, Database20Regular, Globe20Regular, CloudArrowUp20Regular, CheckmarkCircle20Filled, ErrorCircle20Filled } from '@fluentui/react-icons'
 import { Button } from '@/components/ui/button'
@@ -55,7 +57,7 @@ const SOURCE_TYPE_INFO = {
   }
 }
 
-export default function QuickCreateKnowledgeSourcePage() {
+function QuickCreateKnowledgeSourcePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnUrl = searchParams.get('returnUrl')
@@ -401,5 +403,13 @@ export default function QuickCreateKnowledgeSourcePage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function QuickCreateKnowledgeSourcePage() {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <QuickCreateKnowledgeSourcePageContent />
+    </Suspense>
   )
 }
