@@ -11,7 +11,8 @@ import {
   Play20Regular,
   Navigation20Regular,
   Dismiss20Regular,
-  ArrowUpRight16Regular
+  ArrowUpRight16Regular,
+  Apps20Regular
 } from '@fluentui/react-icons'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -30,6 +31,7 @@ const navigation: NavItem[] = [
   { href: '/knowledge-sources', label: 'Knowledge sources', icon: Database20Regular },
   { href: '/knowledge-agents', label: 'Knowledge agents', icon: Bot20Regular },
   { href: '/playground', label: 'Playground', icon: Play20Regular },
+  { href: '/agent-builder', label: 'Agent Builder', icon: Apps20Regular },
 ]
 
 interface AppShellProps {
