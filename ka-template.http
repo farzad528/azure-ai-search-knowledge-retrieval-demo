@@ -1,161 +1,127 @@
 ################################################################################
-# Azure AI Search KR + Foundry MCP Demo (Sanitized / Generic)
-# API versions: KR=2025-08-01-Preview, Foundry=2025-05-01
+# Azure AI Search Knowledge Agent Demo (Sanitized Template)
+# Goal: Minimal end-to-end walkthrough from knowledge sources → agent → retrieval.
+# API versions: Search KR = 2025-08-01-Preview, Foundry = 2025-05-01
 #
-# How to run (no secrets in this file):
-#  1) Set environment variables (VS Code REST Client loads .env automatically):
-#       export SEARCH_API_KEY='<your-search-admin-or-query-key>'
-#       export FOUNDRY_BEARER_TOKEN='<aad-bearer-token>'
-#  2) Replace <placeholders> below (endpoints, subscription, RG, storage, etc.).
-#  3) Prepare content:
-#       - Create a blob container (e.g., "<your-vlog-container>").
-#       - Drop PDFs into:
-#           /content/vlog/pdfs/               (for KS #1)
-#           /content/notes/pdfs/              (for KS #2)
-#       - Or use an existing Search index (see Section 1b).
-#  4) Send requests from VS Code "REST Client" or Thunder Client.
+# How to run (no secrets checked in):
+#   1) Set environment variables (VS Code REST Client loads .env automatically):
+#        setx SEARCH_API_KEY "<your-search-admin-or-query-key>"
+#        setx OPTIONAL_USER_TOKEN "Bearer <aad-token-if-needed>"
+#        setx FOUNDRY_BEARER_TOKEN "Bearer <aad-bearer-token>"
+#   2) Replace ALL angle-bracket placeholders (<...>) below.
+#   3) Prepare blob content for each knowledge source (folder paths configurable).
+#   4) Send requests from VS Code "REST Client" or Thunder Client.
 #
-# Supported models for this demo (use exactly these):
-#   Chat / Completion:
-#     - gpt-4o
-#     - gpt-4o-mini
-#     - gpt-4.1-nano
-#     - gpt-4.1-mini
-#     - gpt-4.1
-#     - gpt-5
-#     - gpt-5-mini
-#     - gpt-5-nano
-#   Embedding:
-#     - text-embedding-ada-002
-#     - text-embedding-3-large
-#     - text-embedding-3-small
+# Supported chat / completion deployments (use exactly these model names):
+#   gpt-4o | gpt-4o-mini | gpt-4.1-nano | gpt-4.1-mini | gpt-4.1 | gpt-5 | gpt-5-mini | gpt-5-nano
+#
+# Supported embedding deployments:
+#   text-embedding-ada-002 | text-embedding-3-large | text-embedding-3-small
 ################################################################################
 
-### ---------- Configuration (NO SECRETS CHECKED IN) ----------
+################################################################################
+# ⚙️ CONFIGURATION & AUTHENTICATION
+################################################################################
+
+### Azure AI Search endpoint and API version
 @search-endpoint = https://<your-search-service>.search.windows.net
 @search-api-version = 2025-08-01-Preview
 
+### Azure OpenAI resource for embeddings + responses
+@aoai-endpoint = https://<your-aoai-resource>.openai.azure.com
+@aoai-embedding-deployment = <your-embedding-deployment-name>       // e.g., text-embedding-3-large
+@aoai-chat-deployment = <your-chat-deployment-name>                 // e.g., gpt-4o-mini
+
+### Azure Storage container that holds your documents
+@storage-resource-id = /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Storage/storageAccounts/<storage-account>
+@storage-container = <your-blob-container>
+
+### Security headers (store tokens in env vars; refresh before every session)
+# PowerShell example:
+#   az account get-access-token --resource https://search.azure.com --query accessToken -o tsv
+@search-api-key = {{$env SEARCH_API_KEY}}
+@optional-user-token = {{$env OPTIONAL_USER_TOKEN}}                 // optional Bearer token for user context
+
+### Logical resource names (rename to fit your scenario)
+@ks-prefix = <your-knowledge-source-prefix>                         // e.g., "kb-demo"
+@foundry-assistant-name = {{ks-prefix}}-agent
+@ks-primary = {{ks-prefix}}-primary
+@ks-secondary = {{ks-prefix}}-secondary
+@agent-name = {{foundry-assistant-name}}
+
+### MCP/Foundry wiring (optional; used in Section 4)
+@mcp-server-label = <your_mcp_label>                                // letters, numbers, underscores only
+@mcp-server-url = {{search-endpoint}}/agents/{{foundry-assistant-name}}/mcp?api-version={{search-api-version}}
+
+### Optional: Azure AI Foundry project (only needed for Section 4)
 @foundry-project-endpoint = https://<your-foundry>.services.ai.azure.com/api/projects/<your-project-id>
 @foundry-api-version = 2025-05-01
-
-# Secrets via environment variables only:
-@search-api-key = {{$env SEARCH_API_KEY}}
 @foundry-bearer-token = {{$env FOUNDRY_BEARER_TOKEN}}
 
-# Azure resources (non-secret identifiers)
-@subscription-id = <your-subscription-id>
-@resource-group = <your-resource-group>
-@storage-account = <your-storage-account>
-
-# Logical names
-@ks-docs-1 = ks-docs-primary
-@ks-docs-2 = ks-docs-secondary
-@agent-name = knowledge-agent
-@foundry-assistant-name = foundry-knowledge-assistant
+# Placeholders for Section 4 run workflow (fill once you create resources)
+@assistant-id = <asst_xxx>
+@thread-id = <thread_xxx>
+@run-id = <run_xxx>
 
 ################################################################################
-# 1) CREATE KNOWLEDGE SOURCES (Blob; you supply containerName)
+# 📋 SECTION 1: CREATE KNOWLEDGE SOURCES
 ################################################################################
 
-### 1.1 KS #1 (e.g., vlog PDFs) — insert your blob container name
-PUT {{search-endpoint}}/knowledgeSources/{{ks-docs-1}}?api-version={{search-api-version}}
+### 1.1 Create knowledge source (FAQ / primary content)
+PUT {{search-endpoint}}/knowledgeSources/{{ks-primary}}?api-version={{search-api-version}}
 api-key: {{search-api-key}}
 Content-Type: application/json
 
 {
-  "name": "{{ks-docs-1}}",
+  "name": "{{ks-primary}}",
   "kind": "azureBlob",
-  "description": "General documents (e.g., vlog transcripts, PDFs). Drop PDFs under /content/vlog/pdfs/",
+  "description": "Primary knowledge source (e.g., FAQ, quick-start guides).",
   "azureBlobParameters": {
-    "connectionString": "ResourceId=/subscriptions/{{subscription-id}}/resourceGroups/{{resource-group}}/providers/Microsoft.Storage/storageAccounts/{{storage-account}};",
-    "containerName": "<your-vlog-container>",                 // you provide
-    "folderPath": "content/vlog/pdfs/",                       // drop PDFs here
+    "connectionString": "ResourceId={{storage-resource-id}};",
+    "containerName": "{{storage-container}}",
+    "folderPath": "<folder-path-for-primary-docs>/",
     "embeddingModel": {
-      "kind": "azureAI",
-      "azureAIParameters": {
-        "projectUri": "{{foundry-project-endpoint}}",
-        "apiVersion": "{{foundry-api-version}}",
-        "modelName": "<choose: text-embedding-ada-002 | text-embedding-3-large | text-embedding-3-small>"
-      }
-    },
-    "chatCompletionModel": {
-      "kind": "azureAI",
-      "azureAIParameters": {
-        "projectUri": "{{foundry-project-endpoint}}",
-        "apiVersion": "{{foundry-api-version}}",
-        "modelName": "<choose: gpt-4o | gpt-4o-mini | gpt-4.1-nano | gpt-4.1-mini | gpt-4.1 | gpt-5 | gpt-5-mini | gpt-5-nano>"
+      "name": "{{aoai-embedding-deployment}}",
+      "kind": "azureOpenAI",
+      "azureOpenAIParameters": {
+        "resourceUri": "{{aoai-endpoint}}",
+        "modelName": "{{aoai-embedding-deployment}}",
+        "deploymentId": "{{aoai-embedding-deployment}}"
       }
     }
+    // Optional: add "chatCompletionModel" if you want per-source overrides
   }
 }
 
-### 1.2 KS #2 (e.g., notes PDFs) — insert your blob container name
-PUT {{search-endpoint}}/knowledgeSources/{{ks-docs-2}}?api-version={{search-api-version}}
+###
+
+### 1.2 Create knowledge source (Policies / secondary content)
+PUT {{search-endpoint}}/knowledgeSources/{{ks-secondary}}?api-version={{search-api-version}}
 api-key: {{search-api-key}}
 Content-Type: application/json
 
 {
-  "name": "{{ks-docs-2}}",
+  "name": "{{ks-secondary}}",
   "kind": "azureBlob",
-  "description": "General documents (e.g., notes/policies). Drop PDFs under /content/notes/pdfs/",
+  "description": "Secondary knowledge source (e.g., policy PDFs, compliance docs).",
   "azureBlobParameters": {
-    "connectionString": "ResourceId=/subscriptions/{{subscription-id}}/resourceGroups/{{resource-group}}/providers/Microsoft.Storage/storageAccounts/{{storage-account}};",
-    "containerName": "<your-vlog-container>",                 // you provide (same or different)
-    "folderPath": "content/notes/pdfs/",                      // drop PDFs here
+    "connectionString": "ResourceId={{storage-resource-id}};",
+    "containerName": "{{storage-container}}",
+    "folderPath": "<folder-path-for-secondary-docs>/",
     "embeddingModel": {
-      "kind": "azureAI",
-      "azureAIParameters": {
-        "projectUri": "{{foundry-project-endpoint}}",
-        "apiVersion": "{{foundry-api-version}}",
-        "modelName": "<choose: text-embedding-ada-002 | text-embedding-3-large | text-embedding-3-small>"
-      }
-    },
-    "chatCompletionModel": {
-      "kind": "azureAI",
-      "azureAIParameters": {
-        "projectUri": "{{foundry-project-endpoint}}",
-        "apiVersion": "{{foundry-api-version}}",
-        "modelName": "<choose: gpt-4o | gpt-4o-mini | gpt-4.1-nano | gpt-4.1-mini | gpt-4.1 | gpt-5 | gpt-5-mini | gpt-5-nano>"
+      "name": "{{aoai-embedding-deployment}}",
+      "kind": "azureOpenAI",
+      "azureOpenAIParameters": {
+        "resourceUri": "{{aoai-endpoint}}",
+        "modelName": "{{aoai-embedding-deployment}}",
+        "deploymentId": "{{aoai-embedding-deployment}}"
       }
     }
   }
 }
 
 ################################################################################
-# 1b) OPTIONAL: KNOWLEDGE SOURCE VIA EXISTING SEARCH INDEX
-################################################################################
-
-PUT {{search-endpoint}}/knowledgeSources/ks-searchindex?api-version={{search-api-version}}
-api-key: {{search-api-key}}
-Content-Type: application/json
-
-{
-  "name": "ks-searchindex",
-  "kind": "searchIndex",
-  "description": "Existing Azure AI Search index with documents",
-  "searchIndexParameters": {
-    "indexName": "<your-index-name>"                          // you provide
-  },
-  "embeddingModel": {
-    "kind": "azureAI",
-    "azureAIParameters": {
-      "projectUri": "{{foundry-project-endpoint}}",
-      "apiVersion": "{{foundry-api-version}}",
-      "modelName": "<choose: text-embedding-ada-002 | text-embedding-3-large | text-embedding-3-small>"
-    }
-  },
-  "chatCompletionModel": {
-    "kind": "azureAI",
-    "azureAIParameters": {
-      "projectUri": "{{foundry-project-endpoint}}",
-      "apiVersion": "{{foundry-api-version}}",
-      "modelName": "<choose: gpt-4o | gpt-4o-mini | gpt-4.1-nano | gpt-4.1-mini | gpt-4.1 | gpt-5 | gpt-5-mini | gpt-5-nano>"
-    }
-  }
-}
-
-################################################################################
-# 2) CREATE KNOWLEDGE AGENT (uses Foundry models only)
+# 🧠 SECTION 2: CREATE KNOWLEDGE AGENT
 ################################################################################
 
 PUT {{search-endpoint}}/agents/{{agent-name}}?api-version={{search-api-version}}
@@ -164,51 +130,44 @@ Content-Type: application/json
 
 {
   "name": "{{agent-name}}",
-  "description": "Generic knowledge agent using two blob sources (and optional Search index).",
-  "retrievalInstructions": "Use ks-docs-primary for vlog PDFs; use ks-docs-secondary for notes/policies. Optionally include ks-searchindex if present.",
+  "description": "Generic knowledge agent that blends FAQ-style content with policy guidance.",
+  "retrievalInstructions": "Route how-to questions to the primary source; route policy/compliance questions to the secondary source. For mixed questions, retrieve from both and cite both.",
   "knowledgeSources": [
-    { "name": "{{ks-docs-1}}", "alwaysQuerySource": true, "includeReferences": true, "includeReferenceSourceData": true },
-    { "name": "{{ks-docs-2}}", "alwaysQuerySource": true, "includeReferences": true, "includeReferenceSourceData": true }
-    // Optionally add: { "name": "ks-searchindex", "alwaysQuerySource": false, "includeReferences": true }
+    {
+      "name": "{{ks-primary}}",
+      "alwaysQuerySource": true,
+      "includeReferences": true,
+      "includeReferenceSourceData": true
+    },
+    {
+      "name": "{{ks-secondary}}",
+      "alwaysQuerySource": true,
+      "includeReferences": true,
+      "includeReferenceSourceData": true
+    }
   ],
   "models": [
     {
-      "kind": "azureAI",
-      "azureAIParameters": {
-        "projectUri": "{{foundry-project-endpoint}}",
-        "apiVersion": "{{foundry-api-version}}",
-        "modelName": "<choose: gpt-4o | gpt-4o-mini | gpt-4.1-nano | gpt-4.1-mini | gpt-4.1 | gpt-5 | gpt-5-mini | gpt-5-nano>"
+      "kind": "azureOpenAI",
+      "azureOpenAIParameters": {
+        "resourceUri": "{{aoai-endpoint}}",
+        "apiKey": null,
+        "deploymentId": "{{aoai-chat-deployment}}",
+        "modelName": "{{aoai-chat-deployment}}"
       }
     }
   ],
   "outputConfiguration": {
-    "modality": ["answerSynthesis", "extractiveData"],
+    "modality": "answerSynthesis",
     "includeActivity": true
   }
 }
 
 ################################################################################
-# 3) TEST AGENTIC RETRIEVAL (generic prompts)
+# 🔍 SECTION 3: TEST RETRIEVAL FLOWS
 ################################################################################
 
-### 3.1 Summarization across PDFs
-POST {{search-endpoint}}/agents/{{agent-name}}/retrieve?api-version={{search-api-version}}
-api-key: {{search-api-key}}
-Content-Type: application/json
-x-ms-client-request-id: 11111111-1111-1111-1111-111111111111
-
-{
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        { "type": "text", "text": "Summarize the key themes across the PDFs in these sources. Provide citations." }
-      ]
-    }
-  ]
-}
-
-### 3.2 Compare/contrast and flag inconsistencies
+### Happy-path inquiry
 POST {{search-endpoint}}/agents/{{agent-name}}/retrieve?api-version={{search-api-version}}
 api-key: {{search-api-key}}
 Content-Type: application/json
@@ -218,97 +177,84 @@ Content-Type: application/json
     {
       "role": "user",
       "content": [
-        { "type": "text", "text": "Compare the guidance across documents and highlight any conflicting statements, with references." }
+        {
+          "type": "text",
+          "text": "Ask a representative question that should draw from the primary knowledge source."
+        }
+      ]
+    }
+  ],
+  "user": "{{optional-user-token}}"    // optional; include only if you pass user context
+}
+
+###
+
+### Policy & guidelines scenario
+POST {{search-endpoint}}/agents/{{agent-name}}/retrieve?api-version={{search-api-version}}
+api-key: {{search-api-key}}
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Ask a question that should rely on the policy or compliance source."
+        }
       ]
     }
   ]
 }
 
 ################################################################################
-# 4) MCP SERVER (JSON-RPC) FOR THE AGENT
+# 🤝 SECTION 4 (OPTIONAL): CREATE AZURE AI FOUNDRY ASSISTANT WITH MCP
 ################################################################################
 
-### 4.1 List tools
-POST {{search-endpoint}}/agents/{{agent-name}}/mcp?api-version={{search-api-version}}
-api-key: {{search-api-key}}
-Content-Type: application/json
-Accept: application/json, text/event-stream
+# Run only if you plan to expose the knowledge agent through Azure AI Foundry.
 
-{ "jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {} }
-
-### 4.2 Call retrieve via MCP
-POST {{search-endpoint}}/agents/{{agent-name}}/mcp?api-version={{search-api-version}}
-api-key: {{search-api-key}}
-Content-Type: application/json
-Accept: application/json, text/event-stream
-
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "tools/call",
-  "params": {
-    "name": "knowledge_agent_retrieve",
-    "arguments": {
-      "request": {
-        "messages": [
-          { "role": "user", "content": [ { "type": "text", "text": "List the top insights from the most relevant documents, with links." } ] }
-        ]
-      }
-    }
-  }
-}
-
-################################################################################
-# 5) CREATE FOUNDRY ASSISTANT WITH MCP TOOL (Foundry auth only)
-################################################################################
-
+### Create assistant
 POST {{foundry-project-endpoint}}/assistants?api-version={{foundry-api-version}}
-Authorization: Bearer {{foundry-bearer-token}}
+Authorization: {{foundry-bearer-token}}
 Content-Type: application/json
 
 {
-  "instructions": "You are a knowledge assistant that answers questions using designated knowledge sources. Cite references and avoid unverifiable claims.",
+  "name": "{{foundry-assistant-name}}",
+  "model": "<choose-supported-model>",
+  "instructions": "You are a knowledge assistant. Answer only from approved knowledge sources using your MCP Knowledge tool. Always cite your sources.",
   "tools": [
     {
       "type": "mcp",
-      "server_label": "knowledge_agent",
-      "server_url": "{{search-endpoint}}/agents/{{agent-name}}/mcp?api-version={{search-api-version}}",
-      "allowed_tools": ["knowledge_agent_retrieve"]
+      "server_label": "{{mcp-server-label}}",
+      "server_url": "{{mcp-server-url}}",
+      "allowed_tools": [
+        "knowledge_agent_retrieve"
+      ]
     }
-  ],
-  "name": "{{foundry-assistant-name}}",
-  "model": "gpt-4.1-mini"
+  ]
 }
 
-################################################################################
-# 6) FOUNDRY WORKFLOW (THREAD / MESSAGES / RUN)
-################################################################################
-
-# Provide real IDs from creation responses:
-@assistant-id = <asst_xxx>
-@thread-id = <thread_xxx>
-@run-id = <run_xxx>
-
-### 6.1 Create thread
+### Create a thread for the assistant (capture thread_id from response)
 POST {{foundry-project-endpoint}}/threads?api-version={{foundry-api-version}}
-Authorization: Bearer {{foundry-bearer-token}}
+Authorization: {{foundry-bearer-token}}
 Content-Type: application/json
 
 {}
 
-### 6.2 Add user question
+### Add a user question to the thread
 POST {{foundry-project-endpoint}}/threads/{{thread-id}}/messages?api-version={{foundry-api-version}}
-Authorization: Bearer {{foundry-bearer-token}}
+Authorization: {{foundry-bearer-token}}
 Content-Type: application/json
 
 {
   "role": "user",
-  "content": "Summarize and cite the most important points from the PDF set."
+  "content": "<your-user-question>"
 }
 
-### 6.3 Run with auto-approval; pass Search API key header to MCP server
+### Run the assistant, forwarding the Search admin key for MCP access
 POST {{foundry-project-endpoint}}/threads/{{thread-id}}/runs?api-version={{foundry-api-version}}
-Authorization: Bearer {{foundry-bearer-token}}
+Authorization: {{foundry-bearer-token}}
 Content-Type: application/json
 
 {
@@ -316,7 +262,7 @@ Content-Type: application/json
   "tool_resources": {
     "mcp": [
       {
-        "server_label": "knowledge_agent",
+        "server_label": "{{mcp-server-label}}",
         "require_approval": "never",
         "headers": {
           "api-key": "{{search-api-key}}"
@@ -326,49 +272,29 @@ Content-Type: application/json
   }
 }
 
-### 6.4 Check run status
+### Poll the run for completion (set @run-id to the value returned above)
 GET {{foundry-project-endpoint}}/threads/{{thread-id}}/runs/{{run-id}}?api-version={{foundry-api-version}}
-Authorization: Bearer {{foundry-bearer-token}}
+Authorization: {{foundry-bearer-token}}
 
-### 6.5 Get assistant response
+### Get the latest assistant response for the thread
 GET {{foundry-project-endpoint}}/threads/{{thread-id}}/messages?api-version={{foundry-api-version}}
-Authorization: Bearer {{foundry-bearer-token}}
+Authorization: {{foundry-bearer-token}}
 
 ################################################################################
-# 7) MONITORING & STATUS
+# ✅ CLEANUP WHEN FINISHED
 ################################################################################
 
-### 7.1 List knowledge sources
-GET {{search-endpoint}}/knowledgeSources?api-version={{search-api-version}}
-api-key: {{search-api-key}}
+### Delete assistant (if created)
+DELETE {{foundry-project-endpoint}}/assistants/{{foundry-assistant-name}}?api-version={{foundry-api-version}}
+Authorization: {{foundry-bearer-token}}
 
-### 7.2 Agent details
-GET {{search-endpoint}}/agents/{{agent-name}}?api-version={{search-api-version}}
-api-key: {{search-api-key}}
-
-### 7.3 Indexer status (replace with a real indexer name)
-GET {{search-endpoint}}/indexers('<indexer-name>')/search.status?api-version={{search-api-version}}
-api-key: {{search-api-key}}
-
-### 7.4 Document count (replace with a real index name)
-GET {{search-endpoint}}/indexes('<index-name>')/docs/$count?api-version={{search-api-version}}
-api-key: {{search-api-key}}
-
-################################################################################
-# 8) CLEANUP
-################################################################################
-
-### 8.1 Delete Foundry assistant
-DELETE {{foundry-project-endpoint}}/assistants/{{assistant-id}}?api-version={{foundry-api-version}}
-Authorization: Bearer {{foundry-bearer-token}}
-
-### 8.2 Delete knowledge agent
+### Delete agent
 DELETE {{search-endpoint}}/agents/{{agent-name}}?api-version={{search-api-version}}
 api-key: {{search-api-key}}
 
-### 8.3 Delete knowledge sources
-DELETE {{search-endpoint}}/knowledgeSources/{{ks-docs-1}}?api-version={{search-api-version}}
+### Delete knowledge sources
+DELETE {{search-endpoint}}/knowledgeSources/{{ks-primary}}?api-version={{search-api-version}}
 api-key: {{search-api-key}}
-
-DELETE {{search-endpoint}}/knowledgeSources/{{ks-docs-2}}?api-version={{search-api-version}}
+###
+DELETE {{search-endpoint}}/knowledgeSources/{{ks-secondary}}?api-version={{search-api-version}}
 api-key: {{search-api-key}}

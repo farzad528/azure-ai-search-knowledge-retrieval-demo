@@ -27,4 +27,10 @@ next-env.d.ts
 
 # System files
 Thumbs.db
+
+# HTTP test files (exclude template)
 ka-demo.http
+ka-exa-demo.http
+ka-mcp-test-local.http
+ka-secure-demo.http
+ka-zava.http
