@@ -14,7 +14,7 @@ export default function PlaygroundPage() {
 
 function PlaygroundSkeleton() {
   return (
-    <div className="h-[calc(100vh-6rem)] flex">
+    <div className="h-[calc(100vh-7rem)] flex">
       <div className="w-80 border-r border-stroke-divider p-6 space-y-4">
         <LoadingSkeleton className="h-6 w-32" />
         <LoadingSkeleton className="h-32 w-full" />

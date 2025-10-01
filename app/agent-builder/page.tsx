@@ -702,7 +702,7 @@ function AgentBuilderPageContent() {
             />
             <div className="mt-2 space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-fg-muted">Assistant:</span>
+                <span className="text-xs font-medium text-fg-muted">Foundry Agent:</span>
                 <code className="text-xs bg-bg-tertiary px-2 py-0.5 rounded font-mono">{assistantId}</code>
               </div>
               <div className="flex items-center gap-2">

@@ -3,14 +3,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
-  Search20Regular,
   Bot20Regular,
   Globe20Regular,
-  ShieldCheckmark20Regular,
   Settings20Regular,
-  ChevronRight20Regular
+  ChevronRight20Regular,
+  Rocket20Regular
 } from '@fluentui/react-icons'
-import { usePath } from '@/lib/path-context'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
@@ -33,24 +31,6 @@ const valuePropositions = [
   }
 ]
 
-const pathOptions = [
-  {
-    id: 'azure-ai-search' as const,
-    title: 'Azure AI Search Standalone',
-    subtitle: 'Search APIs',
-    description: 'Use if you want to leverage Knowledge Bases for answer synthesis as a RAG Engine over your data',
-    icon: Search20Regular,
-    gradient: 'from-blue-500 to-cyan-600'
-  },
-  {
-    id: 'foundry-agent-service' as const,
-    title: 'Azure AI Search + Foundry',
-    subtitle: 'Search API + Foundry API',
-    description: 'Use Foundry Knowledge Bases to ground AI Agents with Foundry Agent Service plus workflows, observability, and evaluation',
-    icon: ShieldCheckmark20Regular,
-    gradient: 'from-purple-500 to-indigo-600'
-  }
-]
 
 const knowledgeSourceTypes = [
   { name: 'Azure Blob Storage', icon: '/icons/blob.svg', category: 'Cloud Storage' },
@@ -68,12 +48,10 @@ const knowledgeSourceTypes = [
 ]
 
 export function LandingPage() {
-  const { setSelectedPath } = usePath()
   const router = useRouter()
 
-  const handlePathSelection = (pathId: 'azure-ai-search' | 'foundry-agent-service') => {
-    setSelectedPath(pathId)
-    router.push('/')
+  const handleGetStarted = () => {
+    router.push('/agents')
   }
 
   return (
@@ -94,61 +72,41 @@ export function LandingPage() {
         </motion.div>
       </div>
 
-      {/* Path Selection - More Prominent */}
-      <div className="flex-1 flex items-start justify-center px-4 pt-8">
+      {/* Main Call to Action */}
+      <div className="flex-1 flex items-center justify-center px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="max-w-4xl w-full"
+          className="max-w-xl w-full"
         >
-          <h2 className="text-3xl font-semibold text-center text-fg-default mb-12">
-            Choose Your Path
-          </h2>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {pathOptions.map((option, index) => (
-              <motion.div
-                key={option.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-                className="group"
+          <Card
+            className="cursor-pointer transition-all duration-300 hover:shadow-2xl hover:scale-105 border-2 border-stroke-divider bg-bg-card/90 backdrop-blur-sm hover:bg-bg-card hover:border-accent"
+            onClick={handleGetStarted}
+          >
+            <CardHeader className="pb-6">
+              <div className="flex flex-col items-center text-center">
+                <div className="p-5 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 mb-6">
+                  <Rocket20Regular className="h-12 w-12 text-white" />
+                </div>
+                <CardTitle className="text-3xl text-fg-default mb-3">
+                  Azure AI Foundry Knowledge
+                </CardTitle>
+                <CardDescription className="text-lg text-fg-muted max-w-md">
+                  Intelligent knowledge retrieval and agentic chat experiences powered by Azure AI Search and Foundry Agent Service
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button
+                className="w-full h-14 text-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 transition-all duration-300"
+                size="lg"
               >
-                <Card
-                  className="h-full cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 border-2 border-stroke-divider bg-bg-card/90 backdrop-blur-sm hover:bg-bg-card hover:border-accent"
-                  onClick={() => handlePathSelection(option.id)}
-                >
-                  <CardHeader className="pb-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={`p-4 rounded-xl bg-gradient-to-r ${option.gradient}`}>
-                        <option.icon className="h-8 w-8 text-white" />
-                      </div>
-                      <ChevronRight20Regular className="h-6 w-6 text-fg-muted group-hover:text-accent transition-colors" />
-                    </div>
-                    <CardTitle className="text-2xl text-fg-default mb-2">
-                      {option.title}
-                    </CardTitle>
-                    <CardDescription className="text-lg font-medium text-accent">
-                      {option.subtitle}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-fg-muted leading-relaxed mb-6">
-                      {option.description}
-                    </p>
-                    <Button
-                      className="w-full h-12 text-lg group-hover:bg-accent group-hover:text-fg-on-accent transition-colors"
-                      variant="outline"
-                    >
-                      Get Started
-                      <ChevronRight20Regular className="ml-2 h-5 w-5" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
+                Try Now
+                <ChevronRight20Regular className="ml-2 h-6 w-6" />
+              </Button>
+            </CardContent>
+          </Card>
         </motion.div>
       </div>
 

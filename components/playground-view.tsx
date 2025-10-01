@@ -438,7 +438,7 @@ export function PlaygroundView() {
 
   if (!selectedAgent) {
     return (
-      <div className="h-[calc(100vh-6rem)] flex items-center justify-center">
+      <div className="h-[calc(100vh-7rem)] flex items-center justify-center">
         <div className="text-center">
           {agentsLoading ? (
             <>
@@ -463,7 +463,7 @@ export function PlaygroundView() {
 
 
   return (
-    <div className="h-[calc(100vh-6rem)] flex">
+    <div className="h-[calc(100vh-7rem)] flex">
       {/* Left Sidebar - Thread History */}
       <div className="w-80 border-r border-stroke-divider flex flex-col">
         <div className="p-6 border-b border-stroke-divider">
