@@ -179,7 +179,7 @@ export function CreateAgentForm({
               <FormControl>
                 <Input
                   {...register('name')}
-                  placeholder="e.g., Product Documentation Assistant"
+                  placeholder="e.g., Product Documentation Agent"
                   aria-invalid={errors.name ? 'true' : 'false'}
                   maxLength={50}
                 />

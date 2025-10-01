@@ -93,10 +93,10 @@ export default function KnowledgeAgentsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Knowledge agents"
-        description="Purpose-built agents that orchestrate grounded retrieval across your enterprise knowledge."
+        title="Knowledge Bases"
+        description="Manage and configure knowledge bases for grounded retrieval across your enterprise knowledge."
         primaryAction={{
-          label: "Create agent",
+          label: "Create knowledge base",
           onClick: () => setShowCreateAgent(true),
           icon: Add20Regular
         }}

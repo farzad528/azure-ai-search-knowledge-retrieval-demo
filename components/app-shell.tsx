@@ -21,7 +21,6 @@ import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Tooltip } from '@/components/ui/tooltip'
 import Image from 'next/image'
-import { usePath } from '@/lib/path-context'
 
 interface NavItem {
   href: string
@@ -29,15 +28,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
 }
 
-const azureSearchNavigation: NavItem[] = [
-  { href: '/', label: 'Dashboard', icon: Home20Regular },
-  { href: '/knowledge-sources', label: 'Knowledge sources', icon: Database20Regular },
-  { href: '/knowledge-agents', label: 'Knowledge agents', icon: Bot20Regular },
-  { href: '/playground', label: 'Playground', icon: Play20Regular },
-  { href: '/agent-builder', label: 'Agent Builder', icon: Apps20Regular },
-]
-
-const foundryNavigation: NavItem[] = [
+const navigation: NavItem[] = [
   { href: '/agents', label: 'Agents', icon: Bot20Regular },
   { href: '/knowledge', label: 'Knowledge', icon: Database20Regular },
 ]
@@ -50,10 +41,6 @@ export function AppShell({ children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const [collapsed, setCollapsed] = React.useState(false)
   const pathname = usePathname()
-  const { selectedPath, setSelectedPath } = usePath()
-
-  // Get navigation items based on selected path
-  const navigation = selectedPath === 'foundry-agent-service' ? foundryNavigation : azureSearchNavigation
 
   // Load persisted collapse state
   React.useEffect(() => {
@@ -83,8 +70,8 @@ export function AppShell({ children }: AppShellProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // Don't show sidebar for landing page (when no path is selected)
-  const showSidebar = selectedPath !== null
+  // Always show sidebar except on landing page
+  const showSidebar = pathname !== '/'
 
   return (
     <div className="min-h-screen bg-bg-canvas">
@@ -97,7 +84,7 @@ export function AppShell({ children }: AppShellProps) {
       </a>
 
       {/* Header */}
-      <Header onMenuClick={() => setSidebarOpen(true)} showSidebar={showSidebar} selectedPath={selectedPath} setSelectedPath={setSelectedPath} />
+      <Header onMenuClick={() => setSidebarOpen(true)} showSidebar={showSidebar} />
 
       <div className="flex">
         {showSidebar && (
@@ -137,12 +124,12 @@ export function AppShell({ children }: AppShellProps) {
             showSidebar && (collapsed ? 'md:ml-20' : 'md:ml-64')
           )}
         >
-          <div className={cn('flex-1', showSidebar ? 'p-6 md:p-8' : '')}>
+          <div className={cn('flex-1', showSidebar && !pathname.includes('/playground') ? 'p-6 md:p-8' : '')}>
             {children}
           </div>
           {showSidebar && (
-            <footer className="border-t border-stroke-divider px-6 py-4 text-xs text-fg-muted flex items-center justify-center">
-              <span>Made with <span role="img" aria-label="love">❤️</span> by Azure AI Search Product Group</span>
+            <footer className="border-t border-stroke-divider px-6 py-3 text-xs text-fg-muted flex items-center justify-center">
+              <span>Made with <span role="img" aria-label="love">❤️</span> by Azure AI Search PG</span>
             </footer>
           )}
         </main>
@@ -154,11 +141,9 @@ export function AppShell({ children }: AppShellProps) {
 interface HeaderProps {
   onMenuClick: () => void
   showSidebar: boolean
-  selectedPath: string | null
-  setSelectedPath: (path: any) => void
 }
 
-function Header({ onMenuClick, showSidebar, selectedPath, setSelectedPath }: HeaderProps) {
+function Header({ onMenuClick, showSidebar }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 border-b border-stroke-divider bg-bg-card/95 backdrop-blur-sm">
       <div className="flex h-16 items-center justify-between px-6">

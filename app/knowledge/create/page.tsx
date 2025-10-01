@@ -69,15 +69,10 @@ export default function CreateKnowledgeBasePage() {
       <PageHeader
         title="Create Knowledge Base"
         description="Set up a new knowledge base for your agents"
-        icon={Database20Regular}
-        breadcrumb={
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/knowledge">
-              <ArrowLeft20Regular className="h-4 w-4 mr-2" />
-              Back to Knowledge
-            </Link>
-          </Button>
-        }
+        backButton={{
+          href: "/knowledge",
+          label: "Back to Knowledge"
+        }}
       />
 
       <div className="max-w-2xl mx-auto">

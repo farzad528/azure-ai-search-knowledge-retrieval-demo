@@ -4,13 +4,12 @@ import './globals.css'
 import { AppShell } from '@/components/app-shell'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ToastProvider } from '@/components/ui/toast'
-import { PathProvider } from '@/lib/path-context'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Azure AI Search - Knowledge Retrieval Demo',
-  description: 'Knowledge retrieval and agent playground powered by Azure AI Search',
+  title: 'Azure AI Foundry Knowledge - Demo',
+  description: 'Intelligent knowledge retrieval and agentic chat experiences powered by Azure AI Search and Foundry Agent Service',
 }
 
 export default function RootLayout({
@@ -28,9 +27,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ToastProvider>
-            <PathProvider>
-              <AppShell>{children}</AppShell>
-            </PathProvider>
+            <AppShell>{children}</AppShell>
           </ToastProvider>
         </ThemeProvider>
       </body>

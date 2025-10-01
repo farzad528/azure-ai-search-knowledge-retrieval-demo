@@ -3,14 +3,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
-  Search20Regular,
   Bot20Regular,
   Globe20Regular,
-  ShieldCheckmark20Regular,
   Settings20Regular,
-  ChevronRight20Regular
+  ChevronRight20Regular,
+  Rocket20Regular
 } from '@fluentui/react-icons'
-import { usePath } from '@/lib/path-context'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
@@ -33,24 +31,6 @@ const valuePropositions = [
   }
 ]
 
-const pathOptions = [
-  {
-    id: 'azure-ai-search' as const,
-    title: 'Azure AI Search Standalone',
-    subtitle: 'Knowledge APIs',
-    description: 'Use if you want to leverage Azure AI Search Knowledge Base end-to-end',
-    icon: Search20Regular,
-    gradient: 'from-blue-500 to-cyan-600'
-  },
-  {
-    id: 'foundry-agent-service' as const,
-    title: 'Azure AI Search + Foundry',
-    subtitle: 'Agent Service',
-    description: 'Azure AI Search knowledge bases with Foundry Agent Service for grounding',
-    icon: ShieldCheckmark20Regular,
-    gradient: 'from-purple-500 to-indigo-600'
-  }
-]
 
 const knowledgeSourceTypes = [
   { name: 'Azure Blob Storage', icon: '/icons/blob.svg', category: 'Cloud Storage' },
@@ -68,18 +48,16 @@ const knowledgeSourceTypes = [
 ]
 
 export function LandingPage() {
-  const { setSelectedPath } = usePath()
   const router = useRouter()
 
-  const handlePathSelection = (pathId: 'azure-ai-search' | 'foundry-agent-service') => {
-    setSelectedPath(pathId)
-    router.push('/')
+  const handleGetStarted = () => {
+    router.push('/agents')
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-bg-canvas via-bg-card to-bg-canvas flex flex-col">
       {/* Header */}
-      <div className="text-center pt-16 pb-8">
+      <div className="text-center pt-12 pb-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -88,17 +66,67 @@ export function LandingPage() {
           <h1 className="text-4xl md:text-5xl font-bold text-fg-default mb-4">
             Azure AI Search
           </h1>
-          <p className="text-xl text-fg-muted mb-12 max-w-2xl mx-auto px-4">
+          <p className="text-xl text-fg-muted mb-8 max-w-2xl mx-auto px-4">
             Knowledge Retrieval and Agentic RAG Platform
           </p>
         </motion.div>
+      </div>
 
-        {/* Value Propositions */}
+      {/* Main Call to Action */}
+      <div className="flex-1 flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="max-w-xl w-full"
+        >
+          <Card
+            className="cursor-pointer transition-all duration-300 hover:shadow-2xl hover:scale-105 border-2 border-stroke-divider bg-bg-card/90 backdrop-blur-sm hover:bg-bg-card hover:border-accent"
+            onClick={handleGetStarted}
+          >
+            <CardHeader className="pb-6">
+              <div className="flex flex-col items-center text-center">
+                <div className="p-5 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 mb-6">
+                  <Rocket20Regular className="h-12 w-12 text-white" />
+                </div>
+                <CardTitle className="text-3xl text-fg-default mb-3">
+                  Azure AI Foundry Knowledge
+                </CardTitle>
+                <CardDescription className="text-lg text-fg-muted max-w-md">
+                  Intelligent knowledge retrieval and agentic chat experiences powered by Azure AI Search and Foundry Agent Service
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button
+                className="w-full h-14 text-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 transition-all duration-300"
+                size="lg"
+              >
+                Try Now
+                <ChevronRight20Regular className="ml-2 h-6 w-6" />
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Value Propositions - Moved Below */}
+      <div className="max-w-6xl mx-auto px-4 py-16">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="max-w-6xl mx-auto px-4 mb-16"
+          transition={{ duration: 0.6, delay: 0.8 }}
+          className="text-center mb-12"
+        >
+          <h2 className="text-2xl font-semibold text-fg-default mb-3">
+            Why Choose Azure AI Search?
+          </h2>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 1.0 }}
         >
           <div className="grid md:grid-cols-3 gap-8">
             {valuePropositions.map((prop, index) => (
@@ -106,7 +134,7 @@ export function LandingPage() {
                 key={prop.title}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
+                transition={{ duration: 0.5, delay: 1.1 + index * 0.1 }}
                 className="flex flex-col items-center text-center p-6 rounded-lg bg-bg-card/50 backdrop-blur-sm border border-stroke-divider/50"
               >
                 <div className="mb-4 p-3 rounded-full bg-accent-subtle">
@@ -124,12 +152,12 @@ export function LandingPage() {
         </motion.div>
       </div>
 
-      {/* Knowledge Sources Showcase */}
-      <div className="max-w-7xl mx-auto px-4 mb-16">
+      {/* Knowledge Sources Showcase - Moved to Bottom */}
+      <div className="max-w-7xl mx-auto px-4 pb-16">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          transition={{ duration: 0.6, delay: 1.4 }}
           className="text-center mb-8"
         >
           <h2 className="text-2xl font-semibold text-fg-default mb-3">
@@ -144,7 +172,7 @@ export function LandingPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
+          transition={{ duration: 0.6, delay: 1.6 }}
           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"
         >
           {knowledgeSourceTypes.map((source, index) => (
@@ -152,7 +180,7 @@ export function LandingPage() {
               key={source.name}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.9 + index * 0.05 }}
+              transition={{ duration: 0.4, delay: 1.7 + index * 0.02 }}
               className="group flex flex-col items-center p-4 rounded-lg bg-bg-card/30 backdrop-blur-sm border border-stroke-divider/30 hover:border-stroke-control hover:bg-bg-card/50 transition-all duration-300"
             >
               <div className="w-12 h-12 mb-3 flex items-center justify-center rounded-lg bg-bg-canvas/50 group-hover:scale-110 transition-transform duration-300">
@@ -177,7 +205,7 @@ export function LandingPage() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 1.2 }}
+          transition={{ duration: 0.6, delay: 2.0 }}
           className="text-center mt-6"
         >
           <p className="text-sm text-fg-muted">
@@ -186,63 +214,10 @@ export function LandingPage() {
         </motion.div>
       </div>
 
-      {/* Path Selection */}
-      <div className="flex-1 flex items-center justify-center px-4 pb-16">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 1.4 }}
-          className="max-w-4xl w-full"
-        >
-          <h2 className="text-2xl font-semibold text-center text-fg-default mb-8">
-            Choose Your Path
-          </h2>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {pathOptions.map((option, index) => (
-              <motion.div
-                key={option.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 1.5 + index * 0.1 }}
-                className="group"
-              >
-                <Card
-                  className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 border-stroke-divider bg-bg-card/80 backdrop-blur-sm hover:bg-bg-card"
-                  onClick={() => handlePathSelection(option.id)}
-                >
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={`p-3 rounded-lg bg-gradient-to-r ${option.gradient}`}>
-                        <option.icon className="h-6 w-6 text-white" />
-                      </div>
-                      <ChevronRight20Regular className="h-5 w-5 text-fg-muted group-hover:text-accent transition-colors" />
-                    </div>
-                    <CardTitle className="text-xl text-fg-default">
-                      {option.title}
-                    </CardTitle>
-                    <CardDescription className="text-base font-medium text-accent">
-                      {option.subtitle}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-fg-muted leading-relaxed">
-                      {option.description}
-                    </p>
-                    <Button
-                      className="w-full mt-4 group-hover:bg-accent group-hover:text-fg-on-accent transition-colors"
-                      variant="outline"
-                    >
-                      Get Started
-                      <ChevronRight20Regular className="ml-2 h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
+      {/* Footer */}
+      <footer className="border-t border-stroke-divider px-6 py-4 text-xs text-fg-muted flex items-center justify-center">
+        <span>Made with <span role="img" aria-label="love">❤️</span> by Azure AI Search Product Group</span>
+      </footer>
     </div>
   )
 }
