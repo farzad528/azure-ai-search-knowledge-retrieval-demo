@@ -94,9 +94,9 @@ export default function EditKnowledgeBasePage() {
         <PageHeader
           title="Edit Knowledge Base"
           description="Configure your knowledge base settings"
-          backAction={{
+          backButton={{
             label: "Back to Knowledge",
-            onClick: () => router.push('/knowledge')
+            href: '/knowledge'
           }}
         />
         <LoadingSkeleton />
@@ -110,9 +110,9 @@ export default function EditKnowledgeBasePage() {
         <PageHeader
           title="Edit Knowledge Base"
           description="Configure your knowledge base settings"
-          backAction={{
+          backButton={{
             label: "Back to Knowledge",
-            onClick: () => router.push('/knowledge')
+            href: '/knowledge'
           }}
         />
         <ErrorState
@@ -132,9 +132,9 @@ export default function EditKnowledgeBasePage() {
       <PageHeader
         title={`Edit ${kb.name}`}
         description="Configure your knowledge base settings"
-        backAction={{
+        backButton={{
           label: "Back to Knowledge",
-          onClick: () => router.push('/knowledge')
+          href: '/knowledge'
         }}
       />
 

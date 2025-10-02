@@ -360,7 +360,7 @@ export default function AgentsPage() {
                           <CardTitle className="text-lg">Thread {thread.id}</CardTitle>
                           {thread.created_at && (
                             <CardDescription>
-                              Created: {new Date(thread.created_at).toLocaleDateString()}
+                              Created: {thread.created_at ? new Date(Number(thread.created_at) * 1000).toLocaleDateString() : 'Unknown'}
                             </CardDescription>
                           )}
                         </div>
