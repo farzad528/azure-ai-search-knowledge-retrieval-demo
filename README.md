@@ -2,6 +2,8 @@
 
 Next.js app for Azure AI Search knowledge sources, agents, and **Foundry Agent Service integration** with MCP tools. Create agents, chat with knowledge grounding, and export code snippets.
 
+**🚀 Deploy to Vercel**: See [QUICK_START_VERCEL.md](./QUICK_START_VERCEL.md) for 5-minute deployment guide with automatic authentication.
+
 ### 1. What It Does
 * **Knowledge Sources**: Connect Azure Blob, Search Index, or Web sources
 * **Knowledge Agents**: Multi-source retrieval orchestration
@@ -19,7 +21,11 @@ Next.js app for Azure AI Search knowledge sources, agents, and **Foundry Agent S
 
 ### 3. Environment Setup
 
-Copy `.env.example` to `.env` and configure:
+#### For Production (Vercel/Cloud)
+Use **Service Principal** for automatic token refresh. See [QUICK_START_VERCEL.md](./QUICK_START_VERCEL.md) or [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md).
+
+#### For Local Development
+Copy `.env.example` to `.env.local` and configure:
 
 ```bash
 # Azure AI Search
@@ -33,23 +39,43 @@ NEXT_PUBLIC_STANDALONE_AOAI_KEY=your-openai-key
 
 # Foundry Project Integration
 FOUNDRY_PROJECT_ENDPOINT=https://your-resource.services.ai.azure.com/api/projects/your-project
-FOUNDRY_BEARER_TOKEN=your-bearer-token
+
+# Option 1: Service Principal (Recommended - auto-refresh)
+AZURE_AUTH_METHOD=service-principal
+AZURE_TENANT_ID=your-tenant-id
+AZURE_CLIENT_ID=your-client-id
+AZURE_CLIENT_SECRET=your-client-secret
+
+# Option 2: Manual Bearer Token (expires after 1 hour)
+# FOUNDRY_BEARER_TOKEN=your-bearer-token
 
 # Public endpoints (for MCP URLs)
 NEXT_PUBLIC_SEARCH_ENDPOINT=https://your-search.search.windows.net
 ```
 
-**Generate Foundry Bearer Token:**
+**Generate Manual Bearer Token (Option 2):**
 ```bash
 az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv
 ```
-*Note: Tokens expire after 1 hour*
+
+**Create Service Principal (Option 1 - Recommended):**
+```bash
+az ad sp create-for-rbac --name "ai-demo-local" --role "Cognitive Services User" --scopes /subscriptions/YOUR_SUB_ID/resourceGroups/YOUR_RG
+```
 
 ### 4. Quick Start
+
+#### Local Development
 ```bash
-cp .env.example .env         # fill in your values
+cp .env.example .env.local   # fill in your values
 npm install
 npm run dev                  # http://localhost:3000
+```
+
+#### Vercel Deployment
+```bash
+# See QUICK_START_VERCEL.md for detailed steps
+npm run vercel-deploy
 ```
 
 **Usage Flow:**

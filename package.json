@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "vercel-dev": "vercel dev",
+    "vercel-deploy": "vercel --prod"
   },
   "dependencies": {
     "@azure/identity": "^4.12.0",
