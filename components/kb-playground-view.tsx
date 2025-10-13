@@ -1,0 +1,664 @@
+'use client'
+
+import * as React from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { Send20Regular, Bot20Regular, Person20Regular, ChevronDown20Regular, ChevronUp20Regular, Settings20Regular, Dismiss20Regular, Delete20Regular } from '@fluentui/react-icons'
+import { AgentAvatar } from '@/components/agent-avatar'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { InlineCitationsText } from '@/components/inline-citations'
+import { SourceKindIcon } from '@/components/source-kind-icon'
+import { fetchAgents, retrieveFromAgent } from '../lib/api'
+import { cn, formatRelativeTime, cleanTextSnippet } from '@/lib/utils'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+type KnowledgeAgent = {
+  id: string
+  name: string
+  model?: string
+  sources: string[]
+  status?: string
+  outputConfiguration?: { modality?: string; answerInstructions?: string }
+  retrievalInstructions?: string
+  knowledgeSources?: Array<{
+    name: string
+    includeReferences?: boolean
+    includeReferenceSourceData?: boolean | null
+    alwaysQuerySource?: boolean | null
+    maxSubQueries?: number | null
+    rerankerThreshold?: number | null
+  }>
+}
+
+type MessageContent = { type: 'text'; text: string }
+
+type Message = {
+  id: string
+  role: 'user' | 'assistant'
+  content: MessageContent[]
+  timestamp: Date
+  references?: Reference[]
+  activity?: Activity[]
+}
+
+type Reference = {
+  type: string
+  id: string
+  activitySource: number
+  sourceData?: any
+  rerankerScore?: number
+  docKey?: string
+  blobUrl?: string
+}
+
+type Activity = {
+  type: string
+  id: number
+  inputTokens?: number
+  outputTokens?: number
+  elapsedMs?: number
+  knowledgeSourceName?: string
+  queryTime?: string
+  count?: number
+  searchIndexArguments?: any
+  azureBlobArguments?: any
+}
+
+export function KBPlaygroundView() {
+  const [agents, setAgents] = useState<KnowledgeAgent[]>([])
+  const [selectedAgent, setSelectedAgent] = useState<KnowledgeAgent | null>(null)
+  const [agentsLoading, setAgentsLoading] = useState<boolean>(true)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [runtimeSettings, setRuntimeSettings] = useState({
+    knowledgeSourceParams: []
+  })
+
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Load agents
+  useEffect(() => {
+    const loadAgents = async () => {
+      try {
+        setAgentsLoading(true)
+        const data = await fetchAgents()
+        const rawAgents = data.value || []
+
+        const agentsList = rawAgents.map(agent => ({
+          id: agent.name,
+          name: agent.name,
+          model: agent.models?.[0]?.azureOpenAIParameters?.modelName,
+          sources: (agent.knowledgeSources || []).map(ks => ks.name),
+          status: 'active',
+          description: agent.description,
+          outputConfiguration: agent.outputConfiguration,
+          retrievalInstructions: agent.retrievalInstructions,
+          knowledgeSources: agent.knowledgeSources
+        }))
+
+        setAgents(agentsList)
+
+        // Auto-select first agent
+        if (agentsList.length > 0) {
+          setSelectedAgent(agentsList[0])
+          // Load chat history for first agent
+          loadChatHistory(agentsList[0].id)
+        }
+      } catch (err) {
+        console.error('Failed to load agents:', err)
+      } finally {
+        setAgentsLoading(false)
+      }
+    }
+
+    loadAgents()
+  }, [])
+
+  // Load chat history from localStorage
+  const loadChatHistory = (agentId: string) => {
+    try {
+      const stored = localStorage.getItem(`kb-playground-${agentId}`)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        const messagesWithDates = parsed.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }))
+        setMessages(messagesWithDates)
+      } else {
+        setMessages([])
+      }
+    } catch (err) {
+      console.error('Failed to load chat history:', err)
+      setMessages([])
+    }
+  }
+
+  // Save chat history to localStorage
+  const saveChatHistory = (agentId: string, msgs: Message[]) => {
+    try {
+      localStorage.setItem(`kb-playground-${agentId}`, JSON.stringify(msgs))
+    } catch (err) {
+      console.error('Failed to save chat history:', err)
+    }
+  }
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // Save messages when they change
+  useEffect(() => {
+    if (selectedAgent && messages.length > 0) {
+      saveChatHistory(selectedAgent.id, messages)
+    }
+  }, [messages, selectedAgent])
+
+  const handleAgentChange = (agentId: string) => {
+    const agent = agents.find(a => a.id === agentId)
+    if (agent) {
+      setSelectedAgent(agent)
+      loadChatHistory(agent.id)
+      setRuntimeSettings({ knowledgeSourceParams: [] }) // Reset runtime settings
+    }
+  }
+
+  const handleClearChat = () => {
+    if (selectedAgent) {
+      setMessages([])
+      localStorage.removeItem(`kb-playground-${selectedAgent.id}`)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || !selectedAgent || isLoading) return
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: [{ type: 'text', text: input }],
+      timestamp: new Date()
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setInput('')
+    setIsLoading(true)
+
+    try {
+      const azureMessages = [
+        ...messages.map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content.map(c => ({ type: 'text', text: c.text }))
+        })),
+        {
+          role: 'user' as const,
+          content: [{ type: 'text', text: input }]
+        }
+      ]
+
+      const response = await retrieveFromAgent(selectedAgent.id, azureMessages, runtimeSettings)
+
+      let assistantText = 'I apologize, but I was unable to generate a response.'
+      if (response.response && response.response.length > 0) {
+        const rc = response.response[0].content
+        if (rc && rc.length > 0) assistantText = rc[0].text || assistantText
+      }
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: [{ type: 'text', text: assistantText }],
+        timestamp: new Date(),
+        references: response.references || [],
+        activity: response.activity || []
+      }
+
+      setMessages(prev => [...prev, assistantMessage])
+    } catch (err) {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: [{ type: 'text', text: 'Error processing request. Please try again.' }],
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit(e as any)
+    }
+  }
+
+  if (agentsLoading) {
+    return (
+      <div className="h-[calc(100vh-7rem)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="flex items-center justify-center mb-3">
+            <div className="h-8 w-8 border-2 border-fg-muted border-t-transparent rounded-full animate-spin" aria-label="Loading agents" />
+          </div>
+          <p className="text-sm text-fg-muted">Loading knowledge bases…</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!selectedAgent) {
+    return (
+      <div className="h-[calc(100vh-7rem)] flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold mb-2">No knowledge bases found</h2>
+          <p className="text-fg-muted">Please create a knowledge base to start testing.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="h-[calc(100vh-7rem)] flex">
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="border-b border-stroke-divider p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <AgentAvatar size={44} iconSize={22} variant="subtle" title={selectedAgent.name} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="font-semibold text-xl truncate">Knowledge Base Playground</h1>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Select value={selectedAgent.id} onValueChange={handleAgentChange}>
+                    <SelectTrigger className="w-[280px]">
+                      <SelectValue placeholder="Select a knowledge base" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {agents.map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-fg-muted">•</span>
+                  <span className="text-sm text-fg-muted">{selectedAgent.sources.length} source{selectedAgent.sources.length !== 1 && 's'}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleClearChat}
+                disabled={messages.length === 0}
+                aria-label="Clear chat"
+              >
+                <Delete20Regular className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSettingsOpen(!settingsOpen)}
+                aria-label="Settings"
+              >
+                <Settings20Regular className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {messages.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="inline-block mb-6">
+                <AgentAvatar size={64} iconSize={32} variant="subtle" title={selectedAgent.name} />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Start testing your knowledge base</h3>
+              <p className="text-fg-muted max-w-md mx-auto">
+                Ask questions to test how your knowledge base retrieves and synthesizes information from your sources.
+              </p>
+            </div>
+          ) : (
+            messages.map((message) => (
+              <MessageBubble key={message.id} message={message} agent={selectedAgent} />
+            ))
+          )}
+
+          {isLoading && (
+            <div className="flex items-start gap-4">
+              <div className="p-2 rounded-full bg-accent-subtle">
+                <Bot20Regular className="h-4 w-4 text-accent" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-accent rounded-full animate-bounce" />
+                  <div className="w-2 h-2 bg-accent rounded-full animate-bounce delay-100" />
+                  <div className="w-2 h-2 bg-accent rounded-full animate-bounce delay-200" />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input */}
+        <div className="border-t border-stroke-divider p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask a question to test your knowledge base..."
+                className="min-h-[60px] max-h-[200px] resize-none pr-16"
+                disabled={isLoading}
+              />
+              <div className="absolute bottom-3 right-3">
+                <Button
+                  type="submit"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={!input.trim() || isLoading}
+                >
+                  <Send20Regular className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-fg-muted">
+              Press Enter to send, Shift+Enter for new line
+            </p>
+          </form>
+        </div>
+      </div>
+
+      {/* Right Drawer - Settings Panel */}
+      <AnimatePresence>
+        {settingsOpen && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 400, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="border-l border-stroke-divider bg-bg-card overflow-hidden"
+          >
+            <div className="h-full overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-semibold">Knowledge Base Settings</h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSettingsOpen(false)}
+                  >
+                    <Dismiss20Regular className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Agent Info */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Agent Name</h4>
+                    <div className="p-3 bg-bg-subtle rounded-md">
+                      <span className="text-sm">{selectedAgent.name}</span>
+                    </div>
+                  </div>
+
+                  {/* Model */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Model</h4>
+                    <div className="p-3 bg-bg-subtle rounded-md">
+                      <span className="text-sm">{selectedAgent.model || 'Default model'}</span>
+                    </div>
+                  </div>
+
+                  {/* Output Mode */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Output Mode</h4>
+                    <div className="p-3 bg-bg-subtle rounded-md">
+                      <span className="text-sm">
+                        {selectedAgent.outputConfiguration?.modality === 'answerSynthesis' && 'Answer Synthesis'}
+                        {selectedAgent.outputConfiguration?.modality === 'extractiveData' && 'Extractive Data'}
+                        {!selectedAgent.outputConfiguration?.modality && 'Default'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Answer Instructions */}
+                  {selectedAgent.outputConfiguration?.answerInstructions && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-3">Answer Instructions</h4>
+                      <div className="p-3 bg-bg-subtle rounded-md">
+                        <p className="text-xs text-fg-muted whitespace-pre-wrap">
+                          {selectedAgent.outputConfiguration.answerInstructions}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Retrieval Instructions */}
+                  {selectedAgent.retrievalInstructions && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-3">Retrieval Instructions</h4>
+                      <div className="p-3 bg-bg-subtle rounded-md">
+                        <p className="text-xs text-fg-muted whitespace-pre-wrap">
+                          {selectedAgent.retrievalInstructions}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Knowledge Sources */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Knowledge Sources</h4>
+                    <div className="space-y-2">
+                      {selectedAgent.knowledgeSources?.map((source, index) => (
+                        <div key={index} className="p-3 bg-bg-subtle rounded-md space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-status-success rounded-full" />
+                            <span className="text-sm font-medium">{source.name}</span>
+                          </div>
+                          <div className="text-xs text-fg-muted space-y-1 pl-4">
+                            {source.includeReferences && (
+                              <div>• Include references</div>
+                            )}
+                            {source.includeReferenceSourceData && (
+                              <div>• Include source data</div>
+                            )}
+                            {source.alwaysQuerySource && (
+                              <div>• Always query source</div>
+                            )}
+                            {source.maxSubQueries && (
+                              <div>• Max sub-queries: {source.maxSubQueries}</div>
+                            )}
+                            {source.rerankerThreshold && (
+                              <div>• Reranker threshold: {source.rerankerThreshold}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function MessageBubble({ message, agent }: { message: Message; agent?: KnowledgeAgent }) {
+  const [expanded, setExpanded] = useState(false)
+
+  const shouldShowSnippets = agent?.knowledgeSources?.some(ks => ks.includeReferenceSourceData === true)
+  const isUser = message.role === 'user'
+
+  return (
+    <div className={cn('flex items-start gap-4', isUser && 'flex-row-reverse')}>
+      <div className={cn(
+        'p-2 rounded-full',
+        isUser ? 'bg-bg-subtle' : 'bg-accent-subtle'
+      )}>
+        {isUser ? (
+          <Person20Regular className="h-4 w-4" />
+        ) : (
+          <Bot20Regular className="h-4 w-4 text-accent" />
+        )}
+      </div>
+
+      <div className={cn('flex-1 max-w-[80%] min-w-0', isUser && 'flex justify-end')}>
+        <div className={cn(
+          'rounded-lg p-4 overflow-hidden',
+          isUser
+            ? 'bg-accent text-fg-on-accent ml-12'
+            : 'bg-bg-card border border-stroke-divider'
+        )}>
+          <div className="prose prose-sm max-w-none space-y-3 overflow-x-auto">
+            {message.content.map((content, index) => (
+              <p key={index} className="whitespace-pre-wrap break-words">
+                <InlineCitationsText
+                  text={content.text}
+                  references={message.references}
+                  activity={message.activity}
+                  messageId={message.id}
+                  onActivate={() => setExpanded(true)}
+                />
+              </p>
+            ))}
+          </div>
+
+          {((message.references && message.references.length > 0) || (message.activity && message.activity.length > 0)) && (
+            <div className="mt-4 pt-4 border-t border-stroke-divider">
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="flex items-center gap-2 text-sm font-medium text-fg-muted hover:text-fg-default"
+              >
+                <span>
+                  {message.references && message.references.length > 0
+                    ? `${message.references.length} reference${message.references.length > 1 ? 's' : ''}`
+                    : `${message.activity?.length || 0} search${(message.activity?.length || 0) > 1 ? 'es' : ''}`
+                  }
+                </span>
+                {expanded ? (
+                  <ChevronUp20Regular className="h-3 w-3" />
+                ) : (
+                  <ChevronDown20Regular className="h-3 w-3" />
+                )}
+              </button>
+
+              <AnimatePresence>
+                {expanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="mt-3 space-y-3 overflow-hidden w-full"
+                  >
+                    {/* References */}
+                    {message.references && message.references.length > 0 && (
+                      <div className="space-y-2 w-full">
+                        <h6 className="text-xs font-medium text-fg-muted uppercase tracking-wide">References</h6>
+                        {Array.from(new Map(message.references.map((r, idx) => [r.blobUrl || r.id, { r, idx }])).values()).map(({ r: ref, idx }) => {
+                          const fileName = ref.blobUrl ? decodeURIComponent(ref.blobUrl.split('/').pop() || ref.id) : (ref.docKey || ref.id)
+                          const activity = message.activity?.find(a => a.id === ref.activitySource)
+                          const label = activity?.knowledgeSourceName || fileName
+
+                          return (
+                            <div id={`ref-${message.id}-${idx}`} key={ref.id + (ref.blobUrl || '')} className="p-3 bg-bg-subtle rounded-md group border border-transparent hover:border-accent/40 transition w-full">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="flex items-center gap-1 text-xs font-medium text-accent">
+                                  <SourceKindIcon kind={ref.type} size={14} variant="plain" />
+                                  {label || ref.type}
+                                </span>
+                                {ref.rerankerScore && (
+                                  <span className="text-xs text-fg-muted">{ref.rerankerScore.toFixed(2)}</span>
+                                )}
+                              </div>
+                              <p className="text-xs text-fg-muted break-all" title={fileName}>
+                                <span className="font-medium inline-flex items-center gap-1 max-w-full">
+                                  <span className="truncate max-w-[240px] inline-block align-bottom">{fileName}</span>
+                                </span>
+                              </p>
+
+                              {/* Show snippet if includeReferenceSourceData is enabled and snippet is available */}
+                              {shouldShowSnippets && ref.sourceData?.snippet && (
+                                <div className="mt-3 pt-3 border-t border-stroke-divider w-full">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <div className="text-[10px] font-medium text-fg-muted uppercase tracking-wide">
+                                      Source snippet
+                                    </div>
+                                    <div className="flex-1 h-px bg-stroke-divider"></div>
+                                  </div>
+                                  <div className="text-xs text-fg-default bg-bg-default/30 border border-stroke-divider rounded p-4 max-h-64 overflow-y-auto w-full">
+                                    <div className="leading-relaxed text-fg-muted break-words">
+                                      {cleanTextSnippet(ref.sourceData.snippet)}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* Activity */}
+                    {message.activity && message.activity.length > 0 && (
+                      <div className="space-y-2">
+                        <h6 className="text-xs font-medium text-fg-muted uppercase tracking-wide">Search Activity</h6>
+                        {message.activity.filter(act => act.type === 'searchIndex' || act.type === 'azureBlob').map((activity) => (
+                          <div key={activity.id} className="p-3 bg-bg-subtle rounded-md">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-accent">{activity.type}</span>
+                              <div className="text-xs text-fg-muted space-x-2">
+                                {activity.count !== undefined && <span>{activity.count} results</span>}
+                                {activity.elapsedMs && <span>{activity.elapsedMs}ms</span>}
+                              </div>
+                            </div>
+                            {activity.knowledgeSourceName && (
+                              <p className="text-xs text-fg-muted mb-1">Source: {activity.knowledgeSourceName}</p>
+                            )}
+                            {activity.searchIndexArguments?.search && (
+                              <p className="text-xs text-fg-muted">Query: "{activity.searchIndexArguments.search}"</p>
+                            )}
+                            {activity.azureBlobArguments?.search && (
+                              <p className="text-xs text-fg-muted">Query: "{activity.azureBlobArguments.search}"</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          <div className="mt-3 flex items-center justify-between text-xs text-fg-muted">
+            <span>{formatRelativeTime(message.timestamp)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

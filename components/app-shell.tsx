@@ -30,6 +30,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { href: '/agents', label: 'Agents', icon: Bot20Regular },
+  { href: '/test', label: 'Playground', icon: Play20Regular },
   { href: '/knowledge', label: 'Knowledge', icon: Database20Regular },
 ]
 
@@ -124,7 +125,7 @@ export function AppShell({ children }: AppShellProps) {
             showSidebar && (collapsed ? 'md:ml-20' : 'md:ml-64')
           )}
         >
-          <div className={cn('flex-1', showSidebar && !pathname.includes('/playground') ? 'p-6 md:p-8' : '')}>
+          <div className={cn('flex-1', showSidebar && !pathname.includes('/playground') && !pathname.includes('/test') ? 'p-6 md:p-8' : '')}>
             {children}
           </div>
           {showSidebar && (
