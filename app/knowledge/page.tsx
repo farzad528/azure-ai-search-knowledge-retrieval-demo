@@ -13,7 +13,6 @@ import { StatusPill } from '@/components/shared/status-pill'
 import { ConfirmationDialog } from '@/components/shared/confirmation-dialog'
 import {
   Database20Regular,
-  Add20Regular,
   Settings20Regular,
   Delete20Regular,
   Bot20Regular,
@@ -203,22 +202,13 @@ export default function KnowledgePage() {
       <PageHeader
         title="Knowledge"
         description="Manage knowledge bases for your agents"
-        primaryAction={{
-          label: "Create Knowledge Base",
-          onClick: () => router.push('/knowledge/create'),
-          icon: Add20Regular
-        }}
       />
 
       {knowledgeBases.length === 0 ? (
         <EmptyState
           icon={Database20Regular}
           title="No knowledge bases found"
-          description="Create your first knowledge base to provide context for your agents"
-          action={{
-            label: "Create Knowledge Base",
-            onClick: () => router.push('/knowledge/create')
-          }}
+          description="Knowledge bases provide context for your agents"
         />
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

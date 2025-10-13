@@ -114,7 +114,6 @@ export function CreateAgentForm({
         encryptionKey: null
       }
 
-      console.log('Creating agent with data:', agentData)
       await createAgent(agentData)
       onCancel() // Close the form on success
       

@@ -139,8 +139,7 @@ export function DashboardView({
             {showCreateAgent && (
               <CreateAgentForm
                 knowledgeSources={knowledgeSources}
-                onSubmit={async (data) => {
-                  console.log('Creating agent:', data)
+                onSubmit={async () => {
                   setShowCreateAgent(false)
                   onRefresh()
                 }}
@@ -158,10 +157,9 @@ export function DashboardView({
                 }}
               />
             ) : (
-              agents.map((agent) => {
-                console.log('Rendering agent in dashboard:', agent.name, 'ID:', agent.id)
-                return <KnowledgeAgentCard key={agent.id || agent.name} agent={agent} />
-              })
+              agents.map((agent) => (
+                <KnowledgeAgentCard key={agent.id || agent.name} agent={agent} />
+              ))
             )}
           </div>
         </section>
@@ -182,10 +180,6 @@ export function DashboardView({
               <EmptyState
                 title="No knowledge sources"
                 description="Connect your first data source to enable knowledge retrieval."
-                action={{
-                  label: "Connect source",
-                  onClick: () => console.log('Connect source clicked')
-                }}
               />
             ) : (
               knowledgeSources.map((source) => (

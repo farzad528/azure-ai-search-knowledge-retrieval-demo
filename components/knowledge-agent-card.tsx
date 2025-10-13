@@ -31,12 +31,9 @@ const statusConfig = {
 
 export function KnowledgeAgentCard({ agent }: KnowledgeAgentCardProps) {
   const status = statusConfig[agent.status as keyof typeof statusConfig] || statusConfig.idle
-  console.log('Agent card rendering for:', agent.name, 'with ID:', agent.id)
-  console.log('Full agent object:', JSON.stringify(agent, null, 2))
 
   // Agents use name as ID, so ensure we have at least a name
   if (!agent.name) {
-    console.error('Agent name is missing:', agent)
     return null
   }
 

@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import { useState, useEffect, useRef } from 'react'
 import { Send20Regular, Bot20Regular, Person20Regular, ChevronDown20Regular, ChevronUp20Regular, Settings20Regular, Dismiss20Regular, Delete20Regular } from '@fluentui/react-icons'
 import { AgentAvatar } from '@/components/agent-avatar'
