@@ -34,17 +34,16 @@ const valuePropositions = [
 
 const knowledgeSourceTypes = [
   { name: 'Azure Blob Storage', icon: '/icons/blob.svg', category: 'Cloud Storage' },
-  { name: 'Azure Data Lake Gen2', icon: '/icons/adlsgen2.svg', category: 'Cloud Storage' },
-  { name: 'OneLake', icon: '/icons/onelake.svg', category: 'Cloud Storage' },
-  { name: 'Microsoft Fabric', icon: '/icons/fabric.svg', category: 'Analytics' },
-  { name: 'SQL Database', icon: '/icons/sql.svg', category: 'Databases' },
-  { name: 'Cosmos DB', icon: '/icons/cosmosdb.svg', category: 'Databases' },
-  { name: 'Bing Search', icon: '/icons/bing.svg', category: 'Web & Search' },
-  { name: 'Web Sources', icon: '/icons/web.svg', category: 'Web & Search' },
-  { name: 'SharePoint', icon: '/icons/sharepoint.svg', category: 'Collaboration' },
-  { name: 'Microsoft 365', icon: '/icons/m365.svg', category: 'Collaboration' },
-  { name: 'GitHub', icon: '/icons/github-mark.svg', category: 'Code & Dev' },
-  { name: 'MCP Servers', icon: '/icons/mcp.svg', category: 'Protocols' }
+  { name: 'Microsoft OneLake', icon: '/icons/onelake.svg', category: 'Cloud Storage' },
+  { name: 'Azure AI Search', icon: '/icons/search_icon.svg', category: 'AI & Search' },
+  { name: 'MCP', icon: '/icons/mcp.svg', category: 'Protocols' },
+  { name: 'Azure SQL', icon: '/icons/sql.svg', category: 'Databases' },
+  { name: 'Azure Cosmos DB', icon: '/icons/cosmosdb.svg', category: 'Databases' },
+  { name: 'ADLS Gen2', icon: '/icons/adlsgen2.svg', category: 'Cloud Storage' },
+  { name: 'Azure Table Storage', icon: '/icons/blob.svg', category: 'Cloud Storage' },
+  { name: 'Web', icon: '/icons/web.svg', category: 'Web & Search' },
+  { name: 'SharePoint (Remote)', icon: '/icons/sharepoint.svg', category: 'Collaboration' },
+  { name: 'SharePoint (Synced)', icon: '/icons/sharepoint.svg', category: 'Collaboration' }
 ]
 
 export function LandingPage() {

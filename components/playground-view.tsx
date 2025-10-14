@@ -82,15 +82,6 @@ export function PlaygroundView() {
   const searchParams = useSearchParams()
   const agentId = searchParams.get('agent')
   
-  console.log('=== PLAYGROUND DEBUG ===')
-  console.log('URL searchParams:', Object.fromEntries(searchParams.entries()))
-  console.log('agentId from URL:', agentId)
-  
-  // Add guard for empty/null agentId
-  if (agentId === '') {
-    console.warn('AgentId is empty string, treating as null')
-  }
-  
   const [agents, setAgents] = useState<KnowledgeAgent[]>([])
   const [selectedAgent, setSelectedAgent] = useState<KnowledgeAgent | null>(null)
   const [agentsLoading, setAgentsLoading] = useState<boolean>(true)
@@ -143,25 +134,15 @@ export function PlaygroundView() {
         }))
         
         setAgents(agentsList)
-        
-        console.log('Looking for agentId:', agentId)
-        console.log('Available agents:', agentsList.map(a => ({ id: a.id, name: a.name })))
-        
+
         if (agentId) {
-          console.log('Searching for agent with ID:', agentId)
           const agent = agentsList.find(a => a.id === agentId || a.name === agentId)
-          console.log('Found agent:', agent)
           if (agent) {
             setSelectedAgent(agent)
-            console.log('Selected agent set:', agent.name)
-          } else {
-            console.error('Agent not found with ID:', agentId)
           }
         } else {
-          console.log('No agentId provided, selecting first agent if available')
           if (agentsList.length > 0) {
             setSelectedAgent(agentsList[0])
-            console.log('Selected first agent:', agentsList[0].name)
           }
         }
       } catch (err) {
