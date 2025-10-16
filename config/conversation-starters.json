@@ -1,7 +1,7 @@
 {
   "$schema": "./conversation-starters.schema.json",
   "version": 1,
-  "updated": "2025-09-14",
+  "updated": "2025-10-16",
   "generalFallback": [
     {
       "id": "themes",
@@ -18,80 +18,80 @@
   ],
   "sets": [
     {
-      "agentIds": ["financial-services-agent"],
+      "agentIds": ["financial-knowledge-base"],
       "starters": [
         {
-          "id": "fees-simple",
-          "label": "Fees (Simple)",
+          "id": "vanguard-fees",
+          "label": "Vanguard Fund Redemption Fees",
           "prompt": "What fees do I pay if I redeem shares of the Vanguard 500 Index Fund within 30 days?",
           "complexity": "Simple",
-          "tags": ["filings"]
+          "tags": ["fees", "mutual-funds"]
         },
         {
-          "id": "risk-compare",
-          "label": "Risk Comparison (Moderate)",
+          "id": "etf-risk-compare",
+          "label": "ETF vs Closed-End Fund Risks",
           "prompt": "Compare the risks of investing in ETFs vs closed-end funds for a conservative investor.",
           "complexity": "Moderate",
-          "tags": ["bulletins", "analysis"]
+          "tags": ["risk-analysis", "investment-types"]
         },
         {
-          "id": "cross-source-risk-fees",
-          "label": "Cross-Source Risk & Fees (Advanced)",
-          "prompt": "Summarize the key risks and the expense ratio from a mutual fund fact sheet and explain how it differs from the 10-K risk disclosure.",
+          "id": "fact-sheet-analysis",
+          "label": "Fact Sheet Analysis with Image",
+          "prompt": "Upload a screenshot of a mutual fund fact sheet (e.g., fee table) and ask: Summarize the key risks and expense ratio from this document, and explain how it differs from the 10-K risk disclosure.",
           "complexity": "Advanced",
-          "tags": ["multi-source", "fact-sheet", "10-K"]
+          "tags": ["multi-source", "image-upload", "fact-sheet"]
         }
       ]
     },
     {
-      "agentIds": ["healthcare-agent"],
+      "agentIds": ["healthcare-knowledge-base"],
       "starters": [
         {
-          "id": "contraindications",
-          "label": "Drug Contraindications (Simple)",
+          "id": "albuterol-contraindications",
+          "label": "Albuterol Contraindications",
           "prompt": "List contraindications for Albuterol tablets.",
           "complexity": "Simple",
-          "tags": ["labels"]
+          "tags": ["medications", "contraindications"]
         },
         {
-          "id": "sterilization",
-          "label": "Sterilization Protocol (Moderate)",
-          "prompt": "What is the CDC’s recommended sterilization process for reusable surgical instruments?",
+          "id": "cdc-sterilization",
+          "label": "CDC Sterilization Process",
+          "prompt": "What is the CDC's recommended sterilization process for reusable surgical instruments?",
           "complexity": "Moderate",
-          "tags": ["guidelines"]
+          "tags": ["guidelines", "sterilization", "cdc"]
         },
         {
-          "id": "label-consistency",
-          "label": "Label Consistency (Advanced)",
-          "prompt": "Extract the dosage instructions from an FDA drug label and compare with the DailyMed version. Are they consistent?",
+          "id": "drug-label-comparison",
+          "label": "Drug Label Dosage Comparison with Image",
+          "prompt": "Upload a photo of a drug label and ask: Extract the dosage instructions from this label and compare with the DailyMed version. Are they consistent?",
           "complexity": "Advanced",
-          "tags": ["multi-source", "consistency"]
+          "tags": ["multi-source", "image-upload", "dosage"]
         }
       ]
     },
     {
-      "agentIds": ["manufacturing-agent"],
+      "agentIds": ["manufacturing-knowledge-base"],
       "starters": [
         {
-          "id": "torque",
-          "label": "Torque Spec (Simple)",
+          "id": "torque-spec",
+          "label": "Engine Assembly Torque",
           "prompt": "What torque value is specified for assembly part 123 on the ZX-200 engine?",
           "complexity": "Simple",
-          "tags": ["manuals"]
+          "tags": ["specifications", "assembly"]
         },
         {
-          "id": "ads-list",
-          "label": "Airworthiness Directives (Moderate)",
+          "id": "airworthiness-directives",
+          "label": "EMB-120 Airworthiness Directives",
           "prompt": "List all Airworthiness Directives issued since 2020 for Embraer EMB-120 and summarize key compliance actions.",
           "complexity": "Moderate",
-          "tags": ["directives", "compliance"]
+          "tags": ["directives", "compliance", "aviation"]
         },
         {
-          "id": "directive-supersession",
-          "label": "Directive Supersession (Advanced)",
-          "prompt": "Identify an FAA Airworthiness Directive, determine if it has been superseded, and summarize the compliance steps.",
+          "id": "faa-directive-analysis",
+          "label": "FAA Directive Analysis with Image",
+          "prompt": "Upload a photo of an FAA Airworthiness Directive header page and ask: Identify this directive, check if it has been superseded, and summarize the compliance steps.",
           "complexity": "Advanced",
-          "tags": ["multi-source", "supersession"]
+          "tags": ["multi-source", "image-upload", "directives"]
         }
       ]
     }

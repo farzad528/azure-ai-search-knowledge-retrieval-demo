@@ -64,8 +64,14 @@ export async function fetchKnowledgeSources(): Promise<ApiResponse<any>> {
   return { value: all }
 }
 
+// NOTE: The backend API routes were renamed from "knowledgebases" to "agents".
+// Several UI areas (e.g. Playground) were still calling the old path and receiving 404s.
+// We now point all helper functions to /api/agents and keep this central so any future rename is single-touch.
+// If backward compatibility is ever required, you could add a small proxy route under /api/knowledgebases.
+const AGENTS_BASE_PATH = '/api/agents'
+
 export async function fetchAgents(): Promise<ApiResponse<Agent>> {
-  const response = await fetch('/api/agents', {
+  const response = await fetch(AGENTS_BASE_PATH, {
     cache: 'no-store',
     headers: {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -82,7 +88,7 @@ export async function fetchAgents(): Promise<ApiResponse<Agent>> {
 }
 
 export async function fetchAgent(id: string): Promise<Agent> {
-  const response = await fetch(`/api/agents/${id}`)
+  const response = await fetch(`${AGENTS_BASE_PATH}/${id}`)
 
   if (!response.ok) {
     throw new Error('Failed to fetch agent')
@@ -98,7 +104,7 @@ export async function updateAgent(agentId: string, agentData: Agent): Promise<Ag
     headers['If-Match'] = agentData['@odata.etag']
   }
 
-  const response = await fetch(`/api/agents/${agentId}`, {
+  const response = await fetch(`${AGENTS_BASE_PATH}/${agentId}`, {
     method: 'PUT',
     headers,
     body: JSON.stringify(agentData),
@@ -113,7 +119,7 @@ export async function updateAgent(agentId: string, agentData: Agent): Promise<Ag
 }
 
 export async function deleteAgent(agentId: string): Promise<any> {
-  const response = await fetch(`/api/agents/${agentId}`, {
+  const response = await fetch(`${AGENTS_BASE_PATH}/${agentId}`, {
     method: 'DELETE',
   })
 
@@ -151,7 +157,7 @@ export async function retrieveFromAgent(
   const payload = { messages, ...params }
   delete payload.xMsUserToken
 
-  const response = await fetch(`/api/agents/${agentId}/retrieve`, {
+  const response = await fetch(`${AGENTS_BASE_PATH}/${agentId}/retrieve`, {
     method: 'POST',
     headers,
     body: JSON.stringify(payload),
@@ -166,7 +172,7 @@ export async function retrieveFromAgent(
 }
 
 export async function createAgent(agentData: Partial<Agent>): Promise<Agent> {
-  const response = await fetch('/api/agents/create', {
+  const response = await fetch(`${AGENTS_BASE_PATH}/create`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -599,6 +599,7 @@ export function PlaygroundView() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
                   {starters.map((s, idx) => {
                     const isFirstActive = idx === 0 && isLoading
+                    const requiresImage = s.prompt.toLowerCase().includes('upload')
                     return (
                       <Card
                         key={idx}
@@ -617,7 +618,15 @@ export function PlaygroundView() {
                         <CardContent className="p-4 text-left space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="text-[11px] uppercase tracking-wide text-fg-muted font-medium">{s.complexity}</div>
-                            {s.complexity === 'Advanced' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-subtle text-accent">Multi-source</span>}
+                            <div className="flex items-center gap-1">
+                              {requiresImage && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100/50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300 flex items-center gap-1">
+                                  <Attach20Regular className="h-3 w-3" />
+                                  Image
+                                </span>
+                              )}
+                              {s.complexity === 'Advanced' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-subtle text-accent">Multi-source</span>}
+                            </div>
                           </div>
                           <div className="text-sm font-medium leading-snug">{s.label}</div>
                           <p className="text-xs text-fg-muted leading-snug">{s.prompt}</p>
