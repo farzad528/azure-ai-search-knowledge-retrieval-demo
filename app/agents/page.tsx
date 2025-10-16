@@ -160,7 +160,7 @@ export default function AgentsPage() {
       <div className="space-y-6">
         <PageHeader
           title="Agents"
-          description="Manage your Foundry agents and chat threads"
+          description="Use Foundry Knowledge Bases to ground your Foundry Agents"
         />
         <LoadingSkeleton />
       </div>
@@ -172,7 +172,7 @@ export default function AgentsPage() {
       <div className="space-y-6">
         <PageHeader
           title="Agents"
-          description="Manage your Foundry agents and chat threads"
+          description="Use Foundry Knowledge Bases to ground your Foundry Agents"
         />
         <ErrorState
           title="Error loading agents"

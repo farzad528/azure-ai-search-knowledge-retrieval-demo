@@ -16,18 +16,37 @@ import Image from 'next/image'
 const valuePropositions = [
   {
     icon: Bot20Regular,
-    title: "Effortless Agent Grounding",
-    description: "Build agents that think, not search. One API connects your agent to all enterprise knowledge - from databases to documents to live web data."
+    title: "One API for agent grounding",
+    description: "Connect your agents to all data via one centralized entry point"
   },
   {
     icon: Globe20Regular,
-    title: "Intelligent Knowledge Synthesis",
-    description: "Get answers, not search results. AI-powered query planning delivers contextual, synthesized responses across all your data sources."
+    title: "Multi-source agentic RAG",
+    description: "A unified retrieval pipeline with LLM-powered query planning for full context"
   },
   {
     icon: Settings20Regular,
-    title: "Zero-Setup Knowledge Foundation",
-    description: "Connect any data source instantly. From SharePoint to SQL databases - no indexing, no ETL, no infrastructure management required."
+    title: "Automated data processing",
+    description: "All extraction, enrichment, embedding and storing is done for you"
+  }
+]
+
+const customerBenefits = [
+  {
+    title: "Agentic RAG engine",
+    description: "Maximize the most out of your data with an advanced RAG engine that works out of the box. Pull relevant information across multiple sources using query planning, multi-hop reasoning and agent-optimized response synthesis."
+  },
+  {
+    title: "Zero-friction agent context",
+    description: "Add expert domain knowledge to your Foundry agents in one click, without leaving the portal."
+  },
+  {
+    title: "Enterprise-ready from day one",
+    description: "Built-in security, compliance, and Purview integration vs. fragmented systems siloed by source."
+  },
+  {
+    title: "Centralized RAG expertise",
+    description: "Foundry Knowledge was designed to ground enterprise agents, so developers don't need to become RAG experts. Focus on agent logic instead of knowledge infrastructure plumbing."
   }
 ]
 
@@ -43,14 +62,15 @@ const knowledgeSourceTypes = [
   { name: 'Azure Table Storage', icon: '/icons/blob.svg', category: 'Cloud Storage' },
   { name: 'Web', icon: '/icons/web.svg', category: 'Web & Search' },
   { name: 'SharePoint (Remote)', icon: '/icons/sharepoint.svg', category: 'Collaboration' },
-  { name: 'SharePoint (Synced)', icon: '/icons/sharepoint.svg', category: 'Collaboration' }
+  { name: 'SharePoint (Synced)', icon: '/icons/sharepoint.svg', category: 'Collaboration' },
+  { name: 'Fabric Ontology', icon: '/icons/web.svg', category: 'Knowledge Graph' }
 ]
 
 export function LandingPage() {
   const router = useRouter()
 
   const handleGetStarted = () => {
-    router.push('/agents')
+    router.push('/test')
   }
 
   return (
@@ -81,7 +101,7 @@ export function LandingPage() {
         >
           <Card
             className="cursor-pointer transition-all duration-300 hover:shadow-2xl hover:scale-105 border-2 border-stroke-divider bg-bg-card/90 backdrop-blur-sm hover:bg-bg-card hover:border-accent"
-            onClick={handleGetStarted}
+            onClick={() => router.push('/test')}
           >
             <CardHeader className="pb-6">
               <div className="flex flex-col items-center text-center">
@@ -100,6 +120,7 @@ export function LandingPage() {
               <Button
                 className="w-full h-14 text-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 transition-all duration-300"
                 size="lg"
+                onClick={() => router.push('/test')}
               >
                 Try Now
                 <ChevronRight20Regular className="ml-2 h-6 w-6" />
@@ -118,7 +139,7 @@ export function LandingPage() {
           className="text-center mb-12"
         >
           <h2 className="text-2xl font-semibold text-fg-default mb-3">
-            Why Choose Azure AI Search?
+            Key Features
           </h2>
         </motion.div>
 
@@ -144,6 +165,48 @@ export function LandingPage() {
                 </h3>
                 <p className="text-sm text-fg-muted">
                   {prop.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Customer Benefits */}
+      <div className="max-w-6xl mx-auto px-4 pb-16">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 1.3 }}
+          className="text-center mb-12"
+        >
+          <h2 className="text-2xl font-semibold text-fg-default mb-3">
+            Primary Customer Benefits
+          </h2>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 1.4 }}
+        >
+          <div className="grid md:grid-cols-2 gap-6">
+            {customerBenefits.map((benefit, index) => (
+              <motion.div
+                key={benefit.title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 1.5 + index * 0.1 }}
+                className="flex flex-col p-6 rounded-lg bg-bg-card/50 backdrop-blur-sm border border-stroke-divider/50"
+              >
+                <div className="flex items-start mb-3">
+                  <span className="text-accent mr-2 mt-0.5">•</span>
+                  <h3 className="text-lg font-semibold text-fg-default">
+                    {benefit.title}
+                  </h3>
+                </div>
+                <p className="text-sm text-fg-muted pl-5">
+                  {benefit.description}
                 </p>
               </motion.div>
             ))}
