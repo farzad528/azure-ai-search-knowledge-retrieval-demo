@@ -22,6 +22,12 @@
     },
     "deploySampleData": {
       "value": true
+    },
+    "chatModelName": {
+      "value": "gpt-4o-mini"
+    },
+    "embeddingModelName": {
+      "value": "text-embedding-3-small"
     }
   }
 }

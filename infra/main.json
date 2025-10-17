@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "18124044360892032748"
+      "templateHash": "6313061430549261828"
     }
   },
   "parameters": {
@@ -64,6 +64,35 @@
       "metadata": {
         "description": "Deploy sample data (hotels index and Responsible AI PDF)"
       }
+    },
+    "chatModelName": {
+      "type": "string",
+      "defaultValue": "gpt-4o-mini",
+      "allowedValues": [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "gpt-4.1-nano",
+        "gpt-4.1-mini",
+        "gpt-4.1",
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-5-nano"
+      ],
+      "metadata": {
+        "description": "Chat model to deploy"
+      }
+    },
+    "embeddingModelName": {
+      "type": "string",
+      "defaultValue": "text-embedding-3-small",
+      "allowedValues": [
+        "text-embedding-ada-002",
+        "text-embedding-3-small",
+        "text-embedding-3-large"
+      ],
+      "metadata": {
+        "description": "Embedding model to deploy"
+      }
     }
   },
   "variables": {
@@ -100,6 +129,54 @@
       "environment": "[parameters('environment')]",
       "solution": "Azure AI Search Knowledge Retrieval",
       "managedBy": "Bicep"
+    },
+    "chatModelConfig": {
+      "gpt-4o": {
+        "version": "2024-08-06",
+        "capacity": 30
+      },
+      "gpt-4o-mini": {
+        "version": "2024-07-18",
+        "capacity": 30
+      },
+      "gpt-4.1-nano": {
+        "version": "2024-11-01",
+        "capacity": 30
+      },
+      "gpt-4.1-mini": {
+        "version": "2024-11-01",
+        "capacity": 30
+      },
+      "gpt-4.1": {
+        "version": "2024-11-01",
+        "capacity": 30
+      },
+      "gpt-5": {
+        "version": "latest",
+        "capacity": 30
+      },
+      "gpt-5-mini": {
+        "version": "latest",
+        "capacity": 30
+      },
+      "gpt-5-nano": {
+        "version": "latest",
+        "capacity": 30
+      }
+    },
+    "embeddingModelConfig": {
+      "text-embedding-ada-002": {
+        "version": "2",
+        "capacity": 120
+      },
+      "text-embedding-3-small": {
+        "version": "1",
+        "capacity": 20
+      },
+      "text-embedding-3-large": {
+        "version": "1",
+        "capacity": 20
+      }
     }
   },
   "resources": [
@@ -236,28 +313,28 @@
             "value": "[variables('tags')]"
           },
           "embeddingDeploymentName": {
-            "value": "text-embedding-3-large"
+            "value": "[parameters('embeddingModelName')]"
           },
           "embeddingModelName": {
-            "value": "text-embedding-3-large"
+            "value": "[parameters('embeddingModelName')]"
           },
           "embeddingModelVersion": {
-            "value": "1"
+            "value": "[variables('embeddingModelConfig')[parameters('embeddingModelName')].version]"
           },
           "embeddingCapacity": {
-            "value": 120
+            "value": "[variables('embeddingModelConfig')[parameters('embeddingModelName')].capacity]"
           },
           "chatDeploymentName": {
-            "value": "gpt-4o"
+            "value": "[parameters('chatModelName')]"
           },
           "chatModelName": {
-            "value": "gpt-4o"
+            "value": "[parameters('chatModelName')]"
           },
           "chatModelVersion": {
-            "value": "2024-08-06"
+            "value": "[variables('chatModelConfig')[parameters('chatModelName')].version]"
           },
           "chatCapacity": {
-            "value": 50
+            "value": "[variables('chatModelConfig')[parameters('chatModelName')].capacity]"
           }
         },
         "template": {
@@ -267,7 +344,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "12102310250342101777"
+              "templateHash": "17010784144092326323"
             }
           },
           "parameters": {
@@ -303,14 +380,14 @@
             },
             "embeddingDeploymentName": {
               "type": "string",
-              "defaultValue": "text-embedding-3-large",
+              "defaultValue": "text-embedding-3-small",
               "metadata": {
                 "description": "Embedding model deployment name"
               }
             },
             "embeddingModelName": {
               "type": "string",
-              "defaultValue": "text-embedding-3-large",
+              "defaultValue": "text-embedding-3-small",
               "metadata": {
                 "description": "Embedding model name"
               }
@@ -324,37 +401,37 @@
             },
             "embeddingCapacity": {
               "type": "int",
-              "defaultValue": 120,
+              "defaultValue": 20,
               "metadata": {
-                "description": "Embedding model capacity (TPM in thousands)"
+                "description": "Embedding model capacity (TPM in thousands) - safe default for new subscriptions"
               }
             },
             "chatDeploymentName": {
               "type": "string",
-              "defaultValue": "gpt-4o",
+              "defaultValue": "gpt-4o-mini",
               "metadata": {
                 "description": "Chat model deployment name"
               }
             },
             "chatModelName": {
               "type": "string",
-              "defaultValue": "gpt-4o",
+              "defaultValue": "gpt-4o-mini",
               "metadata": {
                 "description": "Chat model name"
               }
             },
             "chatModelVersion": {
               "type": "string",
-              "defaultValue": "2024-08-06",
+              "defaultValue": "2024-07-18",
               "metadata": {
                 "description": "Chat model version"
               }
             },
             "chatCapacity": {
               "type": "int",
-              "defaultValue": 50,
+              "defaultValue": 30,
               "metadata": {
-                "description": "Chat model capacity (TPM in thousands)"
+                "description": "Chat model capacity (TPM in thousands) - safe default for new subscriptions"
               }
             }
           },

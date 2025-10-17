@@ -15,28 +15,28 @@ param sku string = 'S0'
 param tags object = {}
 
 @description('Embedding model deployment name')
-param embeddingDeploymentName string = 'text-embedding-3-large'
+param embeddingDeploymentName string = 'text-embedding-3-small'
 
 @description('Embedding model name')
-param embeddingModelName string = 'text-embedding-3-large'
+param embeddingModelName string = 'text-embedding-3-small'
 
 @description('Embedding model version')
 param embeddingModelVersion string = '1'
 
-@description('Embedding model capacity (TPM in thousands)')
-param embeddingCapacity int = 120
+@description('Embedding model capacity (TPM in thousands) - safe default for new subscriptions')
+param embeddingCapacity int = 20
 
 @description('Chat model deployment name')
-param chatDeploymentName string = 'gpt-4o'
+param chatDeploymentName string = 'gpt-4o-mini'
 
 @description('Chat model name')
-param chatModelName string = 'gpt-4o'
+param chatModelName string = 'gpt-4o-mini'
 
 @description('Chat model version')
-param chatModelVersion string = '2024-08-06'
+param chatModelVersion string = '2024-07-18'
 
-@description('Chat model capacity (TPM in thousands)')
-param chatCapacity int = 50
+@description('Chat model capacity (TPM in thousands) - safe default for new subscriptions')
+param chatCapacity int = 30
 
 resource openAI 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   name: openAIName

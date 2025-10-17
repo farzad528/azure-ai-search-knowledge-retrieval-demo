@@ -30,6 +30,27 @@ param repositoryToken string = ''
 @description('Deploy sample data (hotels index and Responsible AI PDF)')
 param deploySampleData bool = true
 
+@description('Chat model to deploy')
+@allowed([
+  'gpt-4o'
+  'gpt-4o-mini'
+  'gpt-4.1-nano'
+  'gpt-4.1-mini'
+  'gpt-4.1'
+  'gpt-5'
+  'gpt-5-mini'
+  'gpt-5-nano'
+])
+param chatModelName string = 'gpt-4o-mini'
+
+@description('Embedding model to deploy')
+@allowed([
+  'text-embedding-ada-002'
+  'text-embedding-3-small'
+  'text-embedding-3-large'
+])
+param embeddingModelName string = 'text-embedding-3-small'
+
 // SKU selections based on environment
 var skuMap = {
   dev: {
@@ -72,6 +93,57 @@ var tags = {
   managedBy: 'Bicep'
 }
 
+// Model version and capacity mappings
+var chatModelConfig = {
+  'gpt-4o': {
+    version: '2024-08-06'
+    capacity: 30
+  }
+  'gpt-4o-mini': {
+    version: '2024-07-18'
+    capacity: 30
+  }
+  'gpt-4.1-nano': {
+    version: '2024-11-01'
+    capacity: 30
+  }
+  'gpt-4.1-mini': {
+    version: '2024-11-01'
+    capacity: 30
+  }
+  'gpt-4.1': {
+    version: '2024-11-01'
+    capacity: 30
+  }
+  'gpt-5': {
+    version: 'latest'
+    capacity: 30
+  }
+  'gpt-5-mini': {
+    version: 'latest'
+    capacity: 30
+  }
+  'gpt-5-nano': {
+    version: 'latest'
+    capacity: 30
+  }
+}
+
+var embeddingModelConfig = {
+  'text-embedding-ada-002': {
+    version: '2'
+    capacity: 120
+  }
+  'text-embedding-3-small': {
+    version: '1'
+    capacity: 20
+  }
+  'text-embedding-3-large': {
+    version: '1'
+    capacity: 20
+  }
+}
+
 // Deploy Azure AI Search
 module search 'modules/search.bicep' = {
   name: 'deploy-search'
@@ -84,6 +156,7 @@ module search 'modules/search.bicep' = {
 }
 
 // Deploy Azure OpenAI with models
+// Using user-selected models with safe default capacities
 module openai 'modules/openai.bicep' = {
   name: 'deploy-openai'
   params: {
@@ -91,14 +164,14 @@ module openai 'modules/openai.bicep' = {
     location: location
     sku: skuMap[environment].openai
     tags: tags
-    embeddingDeploymentName: 'text-embedding-3-large'
-    embeddingModelName: 'text-embedding-3-large'
-    embeddingModelVersion: '1'
-    embeddingCapacity: 120
-    chatDeploymentName: 'gpt-4o'
-    chatModelName: 'gpt-4o'
-    chatModelVersion: '2024-08-06'
-    chatCapacity: 50
+    embeddingDeploymentName: embeddingModelName
+    embeddingModelName: embeddingModelName
+    embeddingModelVersion: embeddingModelConfig[embeddingModelName].version
+    embeddingCapacity: embeddingModelConfig[embeddingModelName].capacity
+    chatDeploymentName: chatModelName
+    chatModelName: chatModelName
+    chatModelVersion: chatModelConfig[chatModelName].version
+    chatCapacity: chatModelConfig[chatModelName].capacity
   }
 }
 

@@ -4,6 +4,9 @@
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/farzad528/azure-ai-search-knowledge-retrieval-demo&project-name=azure-ai-knowledge-demo&repository-name=azure-ai-knowledge-demo&env=AZURE_SEARCH_ENDPOINT,AZURE_SEARCH_API_KEY,AZURE_SEARCH_API_VERSION,NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT,AZURE_OPENAI_API_KEY,FOUNDRY_PROJECT_ENDPOINT,FOUNDRY_API_VERSION,AZURE_AUTH_METHOD,AZURE_TENANT_ID,AZURE_CLIENT_ID,AZURE_CLIENT_SECRET,NEXT_PUBLIC_SEARCH_ENDPOINT&envDescription=Copy%20values%20from%20Azure%20deployment%20outputs&envLink=https://github.com/farzad528/azure-ai-search-knowledge-retrieval-demo/blob/main/.env.example)
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/farzad528/azure-ai-search-knowledge-retrieval-demo?quickstart=1)
 
+**Deploys:** Azure AI Search + OpenAI (customizable chat & embedding models) + Storage + AI Foundry + Static Web App
+**Default Models:** gpt-4o-mini + text-embedding-3-small | **Time:** 15-20 min | **Cost:** ~$80-120/month
+
 A production-ready Next.js application showcasing **two powerful knowledge retrieval patterns**:
 
 1. **Knowledge Bases** - Azure AI Search Agents with answer synthesis and multi-modal chat
