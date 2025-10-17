@@ -1,21 +1,15 @@
 # Azure AI Search – Knowledge Retrieval Demo
 
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Ffarzad528%2Fazure-ai-search-knowledge-retrieval-demo%2Fmain%2Finfra%2Fmain.json)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/farzad528/azure-ai-search-knowledge-retrieval-demo&project-name=azure-ai-knowledge-demo&repository-name=azure-ai-knowledge-demo&env=AZURE_SEARCH_ENDPOINT,AZURE_SEARCH_API_KEY,AZURE_SEARCH_API_VERSION,NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT,AZURE_OPENAI_API_KEY,FOUNDRY_PROJECT_ENDPOINT,FOUNDRY_API_VERSION,AZURE_AUTH_METHOD,AZURE_TENANT_ID,AZURE_CLIENT_ID,AZURE_CLIENT_SECRET,NEXT_PUBLIC_SEARCH_ENDPOINT&envDescription=Copy%20values%20from%20Azure%20deployment%20outputs&envLink=https://github.com/farzad528/azure-ai-search-knowledge-retrieval-demo/blob/main/.env.example)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/farzad528/azure-ai-search-knowledge-retrieval-demo?quickstart=1)
+
 A production-ready Next.js application showcasing **two powerful knowledge retrieval patterns**:
 
 1. **Knowledge Bases** - Azure AI Search Agents with answer synthesis and multi-modal chat
 2. **Foundry Agents** - Azure AI Foundry Assistant Service with MCP tool integration
 
 Perfect for building customer-facing knowledge assistants, internal chatbots, and agentic workflows with enterprise data.
-
-**🚀 Quick Deploy**: [5-min Vercel](#vercel-deployment) | [10-min Azure App Service](#azure-app-service-deployment)
-
----
-
-## 🎥 Demo
-
-<!-- TODO: Add demo GIF or video -->
-<!-- ![Demo Recording](./docs/demo.gif) -->
-**Coming soon**: Video walkthrough showing both playgrounds in action
 
 ---
 
