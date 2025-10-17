@@ -6,8 +6,7 @@ import {
   Bot20Regular,
   Globe20Regular,
   Settings20Regular,
-  ChevronRight20Regular,
-  Rocket20Regular
+  ChevronRight20Regular
 } from '@fluentui/react-icons'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -83,7 +82,7 @@ export function LandingPage() {
           transition={{ duration: 0.6 }}
         >
           <h1 className="text-4xl md:text-5xl font-bold text-fg-default mb-4">
-            Azure AI Search
+            Azure AI Foundry Knowledge
           </h1>
           <p className="text-xl text-fg-muted mb-8 max-w-2xl mx-auto px-4">
             Knowledge Retrieval and Agentic RAG Platform
@@ -106,7 +105,13 @@ export function LandingPage() {
             <CardHeader className="pb-6">
               <div className="flex flex-col items-center text-center">
                 <div className="p-5 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 mb-6">
-                  <Rocket20Regular className="h-12 w-12 text-white" />
+                  <Image
+                    src="/icons/ai-foundry.png"
+                    alt="Azure AI Foundry Knowledge"
+                    width={48}
+                    height={48}
+                    className="brightness-0 invert"
+                  />
                 </div>
                 <CardTitle className="text-3xl text-fg-default mb-3">
                   Azure AI Foundry Knowledge

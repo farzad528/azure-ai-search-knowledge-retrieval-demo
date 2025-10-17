@@ -1,13 +1,29 @@
 'use client'
 
 import { Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { KBPlaygroundView } from '@/components/kb-playground-view'
+import { IndustryKnowledgeSelector } from '@/components/industry-knowledge-selector'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
+
+function TestPlaygroundContent() {
+  const searchParams = useSearchParams()
+  const selectedAgent = searchParams.get('agent')
+
+  // If no agent is selected, show the industry selector
+  if (!selectedAgent) {
+    return <IndustryKnowledgeSelector />
+  }
+
+  // Otherwise show the playground with the selected agent
+  // Use key to force re-mount when agent changes
+  return <KBPlaygroundView key={selectedAgent} preselectedAgent={selectedAgent} />
+}
 
 export default function TestPlaygroundPage() {
   return (
     <Suspense fallback={<PlaygroundSkeleton />}>
-      <KBPlaygroundView />
+      <TestPlaygroundContent />
     </Suspense>
   )
 }
