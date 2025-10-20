@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Send20Regular, Bot20Regular, Person20Regular, ChevronDown20Regular, ChevronUp20Regular, Settings20Regular, Dismiss20Regular, Delete20Regular, Attach20Regular, Mic20Regular, Image20Regular } from '@fluentui/react-icons'
+import { Send20Regular, Bot20Regular, Person20Regular, ChevronDown20Regular, ChevronUp20Regular, Settings20Regular, Dismiss20Regular, Delete20Regular, Attach20Regular, Mic20Regular, Image20Regular, ChatAdd20Regular, Code20Regular, ArrowCounterclockwise20Regular } from '@fluentui/react-icons'
 import { AgentAvatar } from '@/components/agent-avatar'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { ImageInput } from '@/components/ui/image-input'
 import { InlineCitationsText } from '@/components/inline-citations'
 import { SourceKindIcon } from '@/components/source-kind-icon'
 import { fetchKnowledgeBases, retrieveFromKnowledgeBase } from '../lib/api'
+import { KBViewCodeModal } from '@/components/kb-view-code-modal'
 import { processImageFile } from '@/lib/imageProcessing'
 import { useConversationStarters } from '@/lib/conversationStarters'
 import { cn, formatRelativeTime, cleanTextSnippet } from '@/lib/utils'
@@ -77,7 +78,11 @@ type Activity = {
   azureBlobArguments?: any
 }
 
-export function KBPlaygroundView() {
+interface KBPlaygroundViewProps {
+  preselectedAgent?: string
+}
+
+export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
   const [agents, setAgents] = useState<KnowledgeAgent[]>([])
   const [selectedAgent, setSelectedAgent] = useState<KnowledgeAgent | null>(null)
   const [agentsLoading, setAgentsLoading] = useState<boolean>(true)
@@ -87,12 +92,33 @@ export function KBPlaygroundView() {
   const [imageWarning, setImageWarning] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [viewCodeOpen, setViewCodeOpen] = useState(false)
+  const [showCostEstimates, setShowCostEstimates] = useState(() => {
+    // Load from localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('showCostEstimates')
+      return saved !== null ? saved === 'true' : false // Default to hidden
+    }
+    return false
+  })
   const [runtimeSettings, setRuntimeSettings] = useState({
     knowledgeSourceParams: []
   })
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Get search endpoint from env
+  const searchEndpoint = process.env.NEXT_PUBLIC_SEARCH_ENDPOINT || process.env.NEXT_PUBLIC_AZURE_SEARCH_ENDPOINT || ''
+
+  // Save cost display preference
+  const toggleCostEstimates = () => {
+    const newValue = !showCostEstimates
+    setShowCostEstimates(newValue)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('showCostEstimates', newValue.toString())
+    }
+  }
 
   // Load agents
   useEffect(() => {
@@ -116,11 +142,21 @@ export function KBPlaygroundView() {
 
         setAgents(agentsList)
 
-        // Auto-select first agent
+        // Auto-select agent based on preselectedAgent prop or first agent
         if (agentsList.length > 0) {
-          setSelectedAgent(agentsList[0])
-          // Load chat history for first agent
-          loadChatHistory(agentsList[0].id)
+          let agentToSelect = agentsList[0]
+
+          // If preselectedAgent is provided, try to find it
+          if (preselectedAgent) {
+            const foundAgent = agentsList.find(a => a.id === preselectedAgent || a.name === preselectedAgent)
+            if (foundAgent) {
+              agentToSelect = foundAgent
+            }
+          }
+
+          setSelectedAgent(agentToSelect)
+          // Start fresh - no chat history persistence
+          // loadChatHistory(agentToSelect.id)
         }
       } catch (err) {
         console.error('Failed to load agents:', err)
@@ -130,48 +166,58 @@ export function KBPlaygroundView() {
     }
 
     loadAgents()
-  }, [])
+  }, [preselectedAgent])
 
-  // Load chat history from localStorage
-  const loadChatHistory = (agentId: string) => {
-    try {
-      const stored = localStorage.getItem(`kb-playground-${agentId}`)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        const messagesWithDates = parsed.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        }))
-        setMessages(messagesWithDates)
-      } else {
-        setMessages([])
+  // Watch for preselectedAgent changes and update selection
+  useEffect(() => {
+    if (preselectedAgent && agents.length > 0) {
+      const foundAgent = agents.find(a => a.id === preselectedAgent || a.name === preselectedAgent)
+      if (foundAgent && foundAgent.id !== selectedAgent?.id) {
+        setSelectedAgent(foundAgent)
+        setMessages([]) // Clear messages when switching agents
       }
-    } catch (err) {
-      console.error('Failed to load chat history:', err)
-      setMessages([])
     }
-  }
+  }, [preselectedAgent, agents])
 
-  // Save chat history to localStorage
-  const saveChatHistory = (agentId: string, msgs: Message[]) => {
-    try {
-      localStorage.setItem(`kb-playground-${agentId}`, JSON.stringify(msgs))
-    } catch (err) {
-      console.error('Failed to save chat history:', err)
-    }
-  }
+  // Chat history persistence DISABLED - always start fresh
+  // const loadChatHistory = (agentId: string) => {
+  //   try {
+  //     const stored = localStorage.getItem(`kb-playground-${agentId}`)
+  //     if (stored) {
+  //       const parsed = JSON.parse(stored)
+  //       const messagesWithDates = parsed.map((msg: any) => ({
+  //         ...msg,
+  //         timestamp: new Date(msg.timestamp)
+  //       }))
+  //       setMessages(messagesWithDates)
+  //     } else {
+  //       setMessages([])
+  //     }
+  //   } catch (err) {
+  //     console.error('Failed to load chat history:', err)
+  //     setMessages([])
+  //   }
+  // }
+
+  // const saveChatHistory = (agentId: string, msgs: Message[]) => {
+  //   try {
+  //     localStorage.setItem(`kb-playground-${agentId}`, JSON.stringify(msgs))
+  //   } catch (err) {
+  //     console.error('Failed to save chat history:', err)
+  //   }
+  // }
 
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Save messages when they change
-  useEffect(() => {
-    if (selectedAgent && messages.length > 0) {
-      saveChatHistory(selectedAgent.id, messages)
-    }
-  }, [messages, selectedAgent])
+  // Save messages when they change - DISABLED (no persistence)
+  // useEffect(() => {
+  //   if (selectedAgent && messages.length > 0) {
+  //     saveChatHistory(selectedAgent.id, messages)
+  //   }
+  // }, [messages, selectedAgent])
 
   // Load conversation starters for the selected agent
   const { starters, isGeneralFallback: isGeneral } = useConversationStarters(selectedAgent?.id)
@@ -288,16 +334,15 @@ export function KBPlaygroundView() {
     const agent = agents.find(a => a.id === agentId)
     if (agent) {
       setSelectedAgent(agent)
-      loadChatHistory(agent.id)
+      // Always start fresh - no history loading
+      setMessages([])
       setRuntimeSettings({ knowledgeSourceParams: [] }) // Reset runtime settings
     }
   }
 
   const handleClearChat = () => {
-    if (selectedAgent) {
-      setMessages([])
-      localStorage.removeItem(`kb-playground-${selectedAgent.id}`)
-    }
+    // Simply clear the messages array - no localStorage involvement
+    setMessages([])
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -442,11 +487,21 @@ export function KBPlaygroundView() {
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={() => setViewCodeOpen(true)}
+                aria-label="View code"
+                title="View code to reproduce this conversation"
+              >
+                <Code20Regular className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleClearChat}
                 disabled={messages.length === 0}
-                aria-label="Clear chat"
+                aria-label="Reset chat"
+                title="Reset conversation"
               >
-                <Delete20Regular className="h-5 w-5" />
+                <ArrowCounterclockwise20Regular className="h-5 w-5" />
               </Button>
               <Button
                 variant="ghost"
@@ -526,7 +581,7 @@ export function KBPlaygroundView() {
             </div>
           ) : (
             messages.map((message) => (
-              <MessageBubble key={message.id} message={message} agent={selectedAgent} />
+              <MessageBubble key={message.id} message={message} agent={selectedAgent} showCostEstimates={showCostEstimates} />
             ))
           )}
 
@@ -722,17 +777,63 @@ export function KBPlaygroundView() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Display Settings */}
+                  <div className="pt-6 border-t border-stroke-divider">
+                    <h4 className="text-sm font-medium mb-3">Display Options</h4>
+                    <div className="space-y-3">
+                      <label className="flex items-center justify-between cursor-pointer group">
+                        <div className="flex-1">
+                          <div className="text-sm text-fg-default group-hover:text-accent transition-colors">
+                            Show cost estimates
+                          </div>
+                          <div className="text-xs text-fg-muted">
+                            Display estimated Azure AI Search costs per query
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={showCostEstimates}
+                          onClick={toggleCostEstimates}
+                          className={cn(
+                            "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
+                            showCostEstimates ? "bg-accent" : "bg-bg-subtle border border-stroke-divider"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "inline-block h-4 w-4 transform rounded-full bg-bg-canvas shadow transition-transform",
+                              showCostEstimates ? "translate-x-6" : "translate-x-1"
+                            )}
+                          />
+                        </button>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* View Code Modal */}
+      {selectedAgent && (
+        <KBViewCodeModal
+          isOpen={viewCodeOpen}
+          onClose={() => setViewCodeOpen(false)}
+          agentId={selectedAgent.id}
+          agentName={selectedAgent.name}
+          messages={messages}
+          searchEndpoint={searchEndpoint}
+        />
+      )}
     </div>
   )
 }
 
-function MessageBubble({ message, agent }: { message: Message; agent?: KnowledgeAgent }) {
+function MessageBubble({ message, agent, showCostEstimates }: { message: Message; agent?: KnowledgeAgent; showCostEstimates?: boolean }) {
   const [expanded, setExpanded] = useState(false)
 
   const shouldShowSnippets = agent?.knowledgeSources?.some(ks => ks.includeReferenceSourceData === true)
@@ -863,30 +964,132 @@ function MessageBubble({ message, agent }: { message: Message; agent?: Knowledge
                       </div>
                     )}
 
-                    {/* Activity */}
+                    {/* Activity - Source Annotations & Metrics */}
                     {message.activity && message.activity.length > 0 && (
-                      <div className="space-y-2">
-                        <h6 className="text-xs font-medium text-fg-muted uppercase tracking-wide">Search Activity</h6>
-                        {message.activity.filter(act => act.type === 'searchIndex' || act.type === 'azureBlob').map((activity) => (
-                          <div key={activity.id} className="p-3 bg-bg-subtle rounded-md">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-accent">{activity.type}</span>
-                              <div className="text-xs text-fg-muted space-x-2">
-                                {activity.count !== undefined && <span>{activity.count} results</span>}
-                                {activity.elapsedMs && <span>{activity.elapsedMs}ms</span>}
-                              </div>
-                            </div>
-                            {activity.knowledgeSourceName && (
-                              <p className="text-xs text-fg-muted mb-1">Source: {activity.knowledgeSourceName}</p>
-                            )}
-                            {activity.searchIndexArguments?.search && (
-                              <p className="text-xs text-fg-muted">Query: "{activity.searchIndexArguments.search}"</p>
-                            )}
-                            {activity.azureBlobArguments?.search && (
-                              <p className="text-xs text-fg-muted">Query: "{activity.azureBlobArguments.search}"</p>
-                            )}
+                      <div className="space-y-3">
+                        {/* Sources Queried */}
+                        <div className="space-y-2">
+                          <h6 className="text-xs font-medium text-fg-muted uppercase tracking-wide">Sources Queried</h6>
+                          <div className="flex flex-wrap gap-2">
+                            {message.activity.filter(act => act.type === 'searchIndex' || act.type === 'azureBlob').map((activity) => {
+                              const sourceKind = activity.type === 'searchIndex' ? 'searchIndex' : 'azureBlob'
+                              const sourceName = activity.knowledgeSourceName || 'Unknown Source'
+                              const query = activity.searchIndexArguments?.search || activity.azureBlobArguments?.search
+                              const resultCount = activity.count !== undefined ? activity.count : '?'
+                              const duration = activity.elapsedMs ? `${activity.elapsedMs}ms` : ''
+
+                              const tooltipText = [
+                                sourceName,
+                                query ? `Query: "${query}"` : null,
+                                `${resultCount} results`,
+                                duration
+                              ].filter(Boolean).join(' • ')
+
+                              return (
+                                <div
+                                  key={activity.id}
+                                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-bg-subtle border border-stroke-divider rounded-full hover:bg-accent-subtle hover:border-accent transition-all cursor-default group"
+                                  title={tooltipText}
+                                >
+                                  <SourceKindIcon
+                                    kind={sourceKind}
+                                    size={14}
+                                    variant="plain"
+                                    className="flex-shrink-0"
+                                  />
+                                  <span className="text-xs font-medium text-fg-default group-hover:text-accent transition-colors">
+                                    {sourceName}
+                                  </span>
+                                  <span className="text-xs text-fg-muted">
+                                    {resultCount}
+                                  </span>
+                                </div>
+                              )
+                            })}
                           </div>
-                        ))}
+                        </div>
+
+                        {/* Response Metrics */}
+                        {(() => {
+                          // Calculate metrics
+                          const totalTime = message.activity.reduce((sum, act) => sum + (act.elapsedMs || 0), 0)
+                          const totalTokens = message.activity.reduce((sum, act) => {
+                            return sum + (act.inputTokens || 0) + (act.outputTokens || 0)
+                          }, 0)
+
+                          // Get unique sources with counts
+                          const sourcesMap = new Map<string, number>()
+                          message.activity
+                            .filter(act => act.type === 'searchIndex' || act.type === 'azureBlob')
+                            .forEach(act => {
+                              const name = act.knowledgeSourceName || 'Unknown'
+                              const count = act.count || 0
+                              sourcesMap.set(name, (sourcesMap.get(name) || 0) + count)
+                            })
+                          const uniqueSourcesCount = sourcesMap.size
+                          const totalResults = Array.from(sourcesMap.values()).reduce((sum, count) => sum + count, 0)
+
+                          const formatTime = (ms: number) => {
+                            if (ms < 1000) return `${ms}ms`
+                            return `${(ms / 1000).toFixed(1)}s`
+                          }
+
+                          // Cost calculation
+                          const inputTokens = message.activity.reduce((sum, act) => sum + (act.inputTokens || 0), 0)
+                          const outputTokens = message.activity.reduce((sum, act) => sum + (act.outputTokens || 0), 0)
+
+                          // Count semantic queries (searches performed)
+                          const semanticQueries = message.activity.filter(act =>
+                            act.type === 'searchIndex' || act.type === 'azureBlob'
+                          ).length
+
+                          // Azure AI Search Pricing (Standard tier, after free tier)
+                          const PRICING = {
+                            semanticQueryCost: 1.00 / 1000, // $1.00 per 1,000 queries
+                            agenticRetrievalTokenCost: 0.022 / 1000000 // $0.022 per 1M tokens
+                          }
+
+                          const queryCost = semanticQueries * PRICING.semanticQueryCost
+                          const tokenCost = totalTokens * PRICING.agenticRetrievalTokenCost
+                          const totalCost = queryCost + tokenCost
+
+                          const formatCost = (cost: number) => {
+                            if (cost < 0.01) return `$${cost.toFixed(4)}`
+                            return `$${cost.toFixed(3)}`
+                          }
+
+                          return (
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-3 gap-3 p-3 bg-bg-subtle border border-stroke-divider rounded-md text-center">
+                                <div>
+                                  <div className="text-[10px] text-fg-muted uppercase tracking-wider mb-0.5">Time</div>
+                                  <div className="text-sm font-medium text-fg-default">{formatTime(totalTime)}</div>
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-fg-muted uppercase tracking-wider mb-0.5">Sources</div>
+                                  <div className="text-sm font-medium text-fg-default">{uniqueSourcesCount}</div>
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-fg-muted uppercase tracking-wider mb-0.5">Tokens</div>
+                                  <div className="text-sm font-medium text-fg-default">{totalTokens.toLocaleString()}</div>
+                                </div>
+                              </div>
+
+                              {/* Cost Estimate */}
+                              {showCostEstimates && (
+                                <div
+                                  className="p-3 bg-accent-subtle/30 border border-accent/30 rounded-md cursor-default group"
+                                  title={`${semanticQueries} semantic ${semanticQueries === 1 ? 'query' : 'queries'} • ${totalTokens.toLocaleString()} agentic retrieval tokens`}
+                                >
+                                  <div className="text-xs font-medium text-accent flex items-center gap-1.5">
+                                    <span>💰</span>
+                                    <span className="font-mono text-sm">{formatCost(totalCost)}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
                     )}
                   </motion.div>
