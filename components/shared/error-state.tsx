@@ -22,19 +22,19 @@ export function ErrorState({
 }: ErrorStateProps) {
   return (
     <div className={cn(
-      'flex flex-col items-center justify-center py-12 px-6 text-center',
+      'flex flex-col items-center justify-center rounded-2xl border border-glass-border bg-glass-surface px-8 py-14 text-center shadow-md backdrop-blur-surface',
       className
     )}>
-      <div className="rounded-full bg-status-danger/10 p-4 mb-4">
+      <div className="mb-6 rounded-full border border-status-danger/30 bg-status-danger/10 p-4 shadow-xs">
         <ErrorCircle20Regular className="h-8 w-8 text-status-danger" />
       </div>
       
-      <h3 className="text-lg font-semibold text-fg-default mb-2">
+      <h3 className="mb-3 text-xl font-semibold tracking-tight text-fg-default">
         {title}
       </h3>
       
       {description && (
-        <p className="text-fg-muted text-sm max-w-sm mb-6">
+        <p className="mb-6 max-w-sm text-sm text-fg-muted">
           {description}
         </p>
       )}

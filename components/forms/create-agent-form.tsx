@@ -7,7 +7,8 @@ import { z } from 'zod'
 import { useToast } from '@/components/ui/toast'
 import { Tooltip } from '@/components/ui/tooltip'
 import { Info20Regular, ChevronDown20Regular, ChevronUp20Regular } from '@fluentui/react-icons'
-import { createAgent } from '@/lib/api'
+// import { createAgent } from '@/lib/api' // Deprecated - agent functionality moved to Foundry
+import { getSourceKindLabel } from '@/lib/sourceKinds'
 
 // Form validation schema based on Azure AI Search 2025-08-01-Preview API
 const createAgentSchema = z.object({
@@ -114,7 +115,7 @@ export function CreateAgentForm({
         encryptionKey: null
       }
 
-      await createAgent(agentData)
+      await onSubmit(data)
       onCancel() // Close the form on success
       
       toast({
@@ -392,7 +393,7 @@ export function CreateAgentForm({
                         />
                         <div className="flex-1">
                           <span className="text-sm font-medium">{source.name}</span>
-                          <span className="text-xs text-fg-muted ml-2">({source.kind})</span>
+                          <span className="text-xs text-fg-muted ml-2">({getSourceKindLabel(source.kind)})</span>
                         </div>
                       </label>
                     ))

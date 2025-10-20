@@ -3,22 +3,22 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors duration-fast ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold tracking-tight transition-all duration-fast ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg-canvas disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-accent text-fg-on-accent hover:bg-accent-hover active:bg-accent-pressed",
-        destructive: "bg-status-danger text-fg-on-accent hover:opacity-90",
-        outline: "border border-stroke-divider bg-bg-card hover:bg-bg-hover active:bg-bg-pressed",
-        secondary: "bg-bg-subtle text-fg-default hover:bg-bg-hover active:bg-bg-pressed",
-        ghost: "hover:bg-bg-hover active:bg-bg-pressed",
-        link: "text-accent underline-offset-4 hover:underline",
+        default: "bg-accent text-fg-on-accent shadow-md hover:bg-accent-hover hover:shadow-lg active:bg-accent-pressed active:shadow-sm",
+        destructive: "bg-status-danger text-fg-on-accent shadow-sm hover:bg-status-danger/90 active:bg-status-danger/80",
+        outline: "border border-glass-border bg-glass-surface text-fg-default shadow-xs hover:border-accent-muted hover:bg-glass-hover active:bg-bg-pressed",
+        secondary: "bg-bg-elevated text-fg-default shadow-xs hover:bg-bg-hover active:bg-bg-pressed",
+        ghost: "text-fg-muted hover:bg-glass-hover hover:text-fg-default active:bg-bg-pressed",
+        link: "text-accent underline-offset-4 transition-shadow hover:underline hover:shadow-[0_2px_0]",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        default: "h-11 px-6",
+        sm: "h-9 rounded-lg px-4",
+        lg: "h-12 rounded-2xl px-8",
+        icon: "h-11 w-11",
       },
     },
     defaultVariants: {

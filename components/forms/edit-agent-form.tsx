@@ -14,6 +14,7 @@ import { FormField, FormLabel, FormControl, FormDescription, FormMessage } from 
 import { FormFrame } from '@/components/shared/form-frame'
 import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
+import { getSourceKindLabel } from '@/lib/sourceKinds'
 
 interface AgentData {
   name: string
@@ -414,7 +415,7 @@ export function EditAgentForm({
                         />
                         <div className="flex-1">
                           <span className="text-sm font-medium">{source.name}</span>
-                          <span className="text-xs text-fg-muted ml-2">({source.kind})</span>
+                          <span className="text-xs text-fg-muted ml-2">({getSourceKindLabel(source.kind)})</span>
                         </div>
                       </label>
                     ))

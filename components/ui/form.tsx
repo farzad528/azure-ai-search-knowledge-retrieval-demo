@@ -20,7 +20,7 @@ export function FormField({ name, children, error }: FormFieldProps) {
   
   return (
     <FormFieldContext.Provider value={{ id, name, error }}>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {children}
       </div>
     </FormFieldContext.Provider>
@@ -43,13 +43,13 @@ export function FormLabel({
     <label
       htmlFor={context?.id}
       className={cn(
-        "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+        "text-sm font-medium tracking-tight text-fg-muted peer-disabled:cursor-not-allowed peer-disabled:opacity-60",
         className
       )}
       {...props}
     >
       {children}
-      {required && <span className="text-status-danger ml-1">*</span>}
+      {required && <span className="ml-1 text-status-danger">*</span>}
     </label>
   )
 }
@@ -76,7 +76,7 @@ export function FormDescription({ className, ...props }: FormDescriptionProps) {
   return (
     <p
       id={`${context?.id}-description`}
-      className={cn("text-sm text-fg-muted", className)}
+      className={cn("text-xs text-fg-subtle", className)}
       {...props}
     />
   )
@@ -95,7 +95,7 @@ export function FormMessage({ className, children, ...props }: FormMessageProps)
   return (
     <p
       id={`${context?.id}-error`}
-      className={cn("text-sm text-status-danger", className)}
+      className={cn("text-sm font-medium text-status-danger", className)}
       {...props}
     >
       {body}

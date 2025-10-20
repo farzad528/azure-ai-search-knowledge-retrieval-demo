@@ -41,7 +41,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
             animate="visible"
             exit="hidden"
             variants={backdropVariants}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-overlay-soft/70 backdrop-blur-elevated"
             onClick={() => onOpenChange(false)}
           />
           
@@ -53,7 +53,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
                 animate="visible"
                 exit="hidden"
                 variants={modalVariants}
-                className="w-full max-w-md transform overflow-hidden rounded-lg bg-bg-card border border-stroke-divider shadow-lg transition-all"
+                className="w-full max-w-lg transform overflow-hidden rounded-2xl border border-glass-border bg-glass-surface shadow-lg backdrop-blur-elevated transition-all"
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
@@ -75,7 +75,7 @@ interface DialogContentProps {
 
 export function DialogContent({ className, children }: DialogContentProps) {
   return (
-    <div className={cn('bg-bg-card', className)}>
+    <div className={cn('bg-transparent text-fg-default', className)}>
       {children}
     </div>
   )
@@ -88,7 +88,7 @@ interface DialogHeaderProps {
 
 export function DialogHeader({ className, children }: DialogHeaderProps) {
   return (
-    <div className={cn('flex flex-col space-y-1.5 p-6', className)}>
+    <div className={cn('flex flex-col space-y-3 p-8 pb-4', className)}>
       {children}
     </div>
   )
@@ -101,7 +101,7 @@ interface DialogFooterProps {
 
 export function DialogFooter({ className, children }: DialogFooterProps) {
   return (
-    <div className={cn('flex justify-end space-x-2 p-6 pt-0', className)}>
+    <div className={cn('flex items-center justify-end gap-3 p-8 pt-4', className)}>
       {children}
     </div>
   )
@@ -114,7 +114,7 @@ interface DialogTitleProps {
 
 export function DialogTitle({ className, children }: DialogTitleProps) {
   return (
-    <h2 className={cn('text-lg font-semibold text-fg-default', className)}>
+    <h2 className={cn('text-xl font-semibold tracking-tight text-fg-default', className)}>
       {children}
     </h2>
   )
@@ -143,7 +143,7 @@ export function DialogClose({ className, onClose }: DialogCloseProps) {
     <Button
       variant="ghost"
       size="icon"
-      className={cn('absolute right-4 top-4', className)}
+  className={cn('absolute right-4 top-4 rounded-full bg-glass-surface backdrop-blur-surface hover:bg-glass-hover', className)}
       onClick={onClose}
       aria-label="Close dialog"
     >

@@ -12,7 +12,7 @@ import { Select } from '@/components/ui/select'
 import { createKnowledgeSource } from '@/lib/api'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 
-type SourceType = 'azureBlob' | 'searchIndex' | 'web'
+type SourceType = 'indexedOneLake' | 'searchIndex' | 'azureBlob' | 'remoteSharePoint' | 'indexedSharePoint' | 'web'
 
 interface QuickCreateConfig {
   sourceType: SourceType

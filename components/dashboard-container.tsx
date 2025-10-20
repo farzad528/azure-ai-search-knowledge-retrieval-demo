@@ -1,16 +1,16 @@
 "use client";
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { DashboardView } from './dashboard-view';
-import { fetchKnowledgeSources, fetchAgents } from '@/lib/api';
+import { fetchKnowledgeSources, fetchKnowledgeBases } from '@/lib/api';
 
 interface DashboardContainerProps {
-  initialAgents: any[];
+  initialKnowledgeBases: any[];
   initialKnowledgeSources: any[];
   initialError: string | null;
 }
 
-export function DashboardContainer({ initialAgents, initialKnowledgeSources, initialError }: DashboardContainerProps) {
-  const [agents, setAgents] = useState<any[]>(initialAgents || []);
+export function DashboardContainer({ initialKnowledgeBases, initialKnowledgeSources, initialError }: DashboardContainerProps) {
+  const [knowledgeBases, setKnowledgeBases] = useState<any[]>(initialKnowledgeBases || []);
   const [knowledgeSources, setKnowledgeSources] = useState<any[]>(initialKnowledgeSources || []);
   const [error, setError] = useState<string | null>(initialError || null);
   const [loading, setLoading] = useState(false);
@@ -21,7 +21,7 @@ export function DashboardContainer({ initialAgents, initialKnowledgeSources, ini
   // On mount, if we had an error from SSR or empty data, attempt client refresh
   useEffect(() => {
     setHydrated(true);
-    if (initialError || (initialAgents.length === 0 && initialKnowledgeSources.length === 0)) {
+    if (initialError || (initialKnowledgeBases.length === 0 && initialKnowledgeSources.length === 0)) {
       refresh();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -31,9 +31,9 @@ export function DashboardContainer({ initialAgents, initialKnowledgeSources, ini
     try {
       setLoading(true);
       setError(null);
-      const [ksData, agentsData] = await Promise.all([
+      const [ksData, knowledgeBaseData] = await Promise.all([
         fetchKnowledgeSources(),
-        fetchAgents()
+        fetchKnowledgeBases()
       ]);
       const mappedSources = (ksData.value || []).map((source: any) => ({
         id: source.name,
@@ -44,20 +44,31 @@ export function DashboardContainer({ initialAgents, initialKnowledgeSources, ini
         status: 'active',
         description: source.description
       }));
-      const mappedAgents = (agentsData.value || []).map((agent: any) => ({
-        id: agent.name,
-        name: agent.name,
-        model: agent.models?.[0]?.azureOpenAIParameters?.modelName,
-        sources: (agent.knowledgeSources || []).map((ks: any) => ks.name),
-        sourceDetails: (agent.knowledgeSources || []).map((ks: any) => ({ name: ks.name, kind: ks.kind })),
-        status: 'active',
-        lastRun: null,
-        createdBy: null,
-        description: agent.description,
-        outputConfiguration: agent.outputConfiguration
-      }));
+      const sourceKindMap = new Map<string, string>();
+      mappedSources.forEach((source: any) => {
+        if (source?.name) {
+          sourceKindMap.set(source.name, source.kind || 'unknown');
+        }
+      });
+
+      const mappedKnowledgeBases = (knowledgeBaseData.value || []).map((base: any) => {
+        const knowledgeSourceNames = (base.knowledgeSources || []).map((ks: any) => ks.name);
+        return {
+          id: base.name,
+          name: base.name,
+          model: base.models?.[0]?.azureOpenAIParameters?.modelName,
+          sources: knowledgeSourceNames,
+          sourceDetails: knowledgeSourceNames.map((name: string) => ({
+            name,
+            kind: sourceKindMap.get(name) || 'unknown',
+          })),
+          status: base.status || 'active',
+          lastRun: base.lastUpdatedOn || base.lastModifiedOn || null,
+          createdBy: base.createdBy || null,
+        };
+      });
       setKnowledgeSources(mappedSources);
-      setAgents(mappedAgents);
+      setKnowledgeBases(mappedKnowledgeBases);
       lastRefreshRef.current = Date.now();
     } catch (e: any) {
       setError(e?.message || 'Failed to load data');
@@ -98,8 +109,8 @@ export function DashboardContainer({ initialAgents, initialKnowledgeSources, ini
   return (
     <DashboardView
       knowledgeSources={knowledgeSources}
-      agents={agents}
-      loading={loading && (hydrated || (agents.length === 0 && knowledgeSources.length === 0))}
+      knowledgeBases={knowledgeBases}
+      loading={loading && (hydrated || (knowledgeBases.length === 0 && knowledgeSources.length === 0))}
       error={error}
       onRefresh={refresh}
     />

@@ -4,38 +4,28 @@ import * as React from 'react'
 import { Add20Regular, ArrowClockwise20Regular } from '@fluentui/react-icons'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageHeader } from '@/components/shared/page-header'
 import { KnowledgeSourceCard } from '@/components/knowledge-source-card'
-import { KnowledgeAgentCard } from '@/components/knowledge-agent-card'
+import { KnowledgeBaseCard, KnowledgeBaseSummary } from '@/components/knowledge-base-card'
 import { EmptyState } from '@/components/shared/empty-state'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
-import { CreateAgentForm } from '@/components/forms/create-agent-form'
+import { CreateKnowledgeBaseForm } from '@/components/forms/create-knowledge-base-form'
 import { staggerContainer, staggerItem } from '@/lib/motion'
 
 type KnowledgeSource = {
   id: string
   name: string
-  kind: 'searchIndex' | 'web' | 'azureBlob'
+  kind: 'indexedOneLake' | 'searchIndex' | 'azureBlob' | 'remoteSharePoint' | 'indexedSharePoint' | 'web'
   docCount?: number
   lastUpdated?: string
   status?: string
 }
 
-type KnowledgeAgent = {
-  id: string
-  name: string
-  model?: string
-  sources: string[]
-  status?: string
-  lastRun?: string
-  createdBy?: string
-}
-
 interface DashboardViewProps {
   knowledgeSources: KnowledgeSource[]
-  agents: KnowledgeAgent[]
+  knowledgeBases: KnowledgeBaseSummary[]
   loading: boolean
   error: string | null
   onRefresh: () => void
@@ -43,12 +33,12 @@ interface DashboardViewProps {
 
 export function DashboardView({ 
   knowledgeSources, 
-  agents, 
+  knowledgeBases, 
   loading, 
   error, 
   onRefresh 
 }: DashboardViewProps) {
-  const [showCreateAgent, setShowCreateAgent] = React.useState(false)
+  const [showCreateKnowledgeBase, setShowCreateKnowledgeBase] = React.useState(false)
   if (loading) {
     return <DashboardSkeleton />
   }
@@ -70,7 +60,7 @@ export function DashboardView({
     <div className="space-y-8">
       <PageHeader
         title="Knowledge retrieval"
-        description={`Manage knowledge sources and agents for intelligent document search and chat experiences${process.env.NEXT_PUBLIC_AZURE_SEARCH_ENDPOINT ? ` • Connected to ${new URL(process.env.NEXT_PUBLIC_AZURE_SEARCH_ENDPOINT).hostname}` : ''}.`}
+  description={`Manage knowledge sources and knowledge bases for intelligent document search and chat experiences${process.env.NEXT_PUBLIC_AZURE_SEARCH_ENDPOINT ? ` • Connected to ${new URL(process.env.NEXT_PUBLIC_AZURE_SEARCH_ENDPOINT).hostname}` : ''}.`}
       />
       
       {/* Quick stats */}
@@ -100,11 +90,11 @@ export function DashboardView({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Knowledge agents
+                Knowledge bases
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{agents.length}</div>
+              <div className="text-2xl font-bold">{knowledgeBases.length}</div>
               <p className="text-xs text-fg-muted">
                 Orchestrating retrieval
               </p>
@@ -115,50 +105,50 @@ export function DashboardView({
       </motion.div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-        {/* Knowledge Agents Section */}
+        {/* Knowledge Bases Section */}
         <section>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-semibold">Knowledge agents</h2>
+              <h2 className="text-xl font-semibold">Knowledge bases</h2>
               <p className="text-sm text-fg-muted mt-1">
-                Purpose-built agents that orchestrate grounded retrieval across your enterprise knowledge.
+                Grounded retrieval configurations that power agents across your organisation.
               </p>
             </div>
             <div className="flex gap-2">
               <Button variant="ghost" size="icon" onClick={onRefresh} aria-label="Refresh data">
                 <ArrowClockwise20Regular className="h-4 w-4" />
               </Button>
-              <Button onClick={() => setShowCreateAgent(true)}>
+              <Button onClick={() => setShowCreateKnowledgeBase(true)}>
                 <Add20Regular className="h-4 w-4 mr-2" />
-                Create agent
+                Create knowledge base
               </Button>
             </div>
           </div>
           
           <div className="space-y-4">
-            {showCreateAgent && (
-              <CreateAgentForm
+            {showCreateKnowledgeBase && (
+              <CreateKnowledgeBaseForm
                 knowledgeSources={knowledgeSources}
                 onSubmit={async () => {
-                  setShowCreateAgent(false)
+                  setShowCreateKnowledgeBase(false)
                   onRefresh()
                 }}
-                onCancel={() => setShowCreateAgent(false)}
+                onCancel={() => setShowCreateKnowledgeBase(false)}
               />
             )}
             
-            {agents.length === 0 && !showCreateAgent ? (
+            {knowledgeBases.length === 0 && !showCreateKnowledgeBase ? (
               <EmptyState
-                title="No knowledge agents"
-                description="Create your first agent to start chatting with your knowledge sources."
+                title="No knowledge bases"
+                description="Create your first knowledge base to power grounded chat experiences."
                 action={{
-                  label: "Create agent",
-                  onClick: () => setShowCreateAgent(true)
+                  label: "Create knowledge base",
+                  onClick: () => setShowCreateKnowledgeBase(true)
                 }}
               />
             ) : (
-              agents.map((agent) => (
-                <KnowledgeAgentCard key={agent.id || agent.name} agent={agent} />
+              knowledgeBases.map((base) => (
+                <KnowledgeBaseCard key={base.id || base.name} knowledgeBase={base} />
               ))
             )}
           </div>

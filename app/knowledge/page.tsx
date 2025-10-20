@@ -21,10 +21,11 @@ import {
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
+import { getSourceKindLabel } from '@/lib/sourceKinds'
 
 interface KnowledgeSource {
   name: string
-  kind: 'searchIndex' | 'azureBlob' | 'web' | 'unknown'
+  kind: 'indexedOneLake' | 'searchIndex' | 'azureBlob' | 'remoteSharePoint' | 'indexedSharePoint' | 'web' | 'unknown'
 }
 
 interface KnowledgeBase {
@@ -64,9 +65,9 @@ export default function KnowledgePage() {
       setLoading(true)
       setError(null)
 
-      // Fetch knowledge bases (agents from Search API) and knowledge sources
+      // Fetch knowledge bases and knowledge sources
       const [kbResponse, ksResponse, agentsResponse] = await Promise.all([
-        fetch('/api/agents', {
+        fetch('/api/knowledge-bases', {
           cache: 'no-store',
           headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
         }),
@@ -90,21 +91,21 @@ export default function KnowledgePage() {
         sourceKindMap.set(source.name, source.kind)
       }
 
-      // Transform agents to knowledge bases format
-      const bases = (kbData.value || []).map((agent: any) => ({
-        id: agent.name,
-        name: agent.name,
-        description: agent.description || agent.retrievalInstructions,
-        retrievalInstructions: agent.retrievalInstructions,
-        model: agent.models?.[0]?.azureAIParameters?.modelName || agent.models?.[0]?.azureOpenAIParameters?.modelName,
-        knowledgeSources: (agent.knowledgeSources || []).map((ks: any) => ({
+      // Transform knowledge bases to display format
+      const bases = (kbData.value || []).map((kb: any) => ({
+        id: kb.name,
+        name: kb.name,
+        description: kb.description || kb.retrievalInstructions,
+        retrievalInstructions: kb.retrievalInstructions,
+        model: kb.models?.[0]?.azureAIParameters?.modelName || kb.models?.[0]?.azureOpenAIParameters?.modelName,
+        knowledgeSources: (kb.knowledgeSources || []).map((ks: any) => ({
           name: ks.name,
           kind: sourceKindMap.get(ks.name) || 'unknown'
         })),
         status: 'active' as const,
         lastUpdated: new Date().toLocaleDateString(),
-        outputConfiguration: agent.outputConfiguration,
-        '@odata.etag': agent['@odata.etag']
+        outputConfiguration: kb.outputConfiguration,
+        '@odata.etag': kb['@odata.etag']
       }))
 
       setKnowledgeBases(bases)
@@ -125,7 +126,7 @@ export default function KnowledgePage() {
   const handleDelete = async (kb: KnowledgeBase) => {
     try {
       setDeleteLoading(true)
-      const response = await fetch(`/api/agents/${kb.id}`, {
+      const response = await fetch(`/api/knowledge-bases/${kb.id}`, {
         method: 'DELETE'
       })
 
@@ -147,7 +148,7 @@ export default function KnowledgePage() {
     return foundryAgents.filter(agent =>
       agent.tools?.some(tool =>
         tool.type === 'mcp' &&
-        tool.server_url?.includes(`/agents/${kbName}/mcp`)
+        tool.server_url?.includes(`/knowledgebases/${kbName}/mcp`)
       )
     )
   }
@@ -158,6 +159,11 @@ export default function KnowledgePage() {
         return '/icons/blob.svg'
       case 'searchIndex':
         return '/icons/search_icon.svg'
+      case 'indexedOneLake':
+        return '/icons/onelake-color.svg'
+      case 'remoteSharePoint':
+      case 'indexedSharePoint':
+        return '/icons/sharepoint.svg'
       case 'web':
         return '/icons/web.svg'
       case 'unknown':
@@ -289,8 +295,8 @@ export default function KnowledgePage() {
                                 <div className="text-xs font-medium text-fg-default truncate">
                                   {source.name}
                                 </div>
-                                <div className="text-xs text-fg-muted capitalize">
-                                  {source.kind}
+                                <div className="text-xs text-fg-muted">
+                                  {getSourceKindLabel(source.kind)}
                                 </div>
                               </div>
                             </div>
@@ -306,24 +312,24 @@ export default function KnowledgePage() {
 
                     {/* Agents Section - Always at bottom with fixed space */}
                     {usedByAgents.length > 0 && (
-                      <div className="border-t border-stroke-divider pt-3 flex-shrink-0 h-[70px] flex flex-col">
-                        <div className="text-xs font-medium text-fg-default mb-2 flex items-center gap-1">
-                          <Bot20Regular className="h-3.5 w-3.5 text-fg-muted" />
-                          Used by {usedByAgents.length}
+                      <div className="border-t border-stroke-divider pt-3 flex-shrink-0">
+                        <div className="text-xs font-medium text-fg-muted mb-2 flex items-center gap-1.5">
+                          <Bot20Regular className="h-3.5 w-3.5" />
+                          <span>Used by {usedByAgents.length} agent{usedByAgents.length !== 1 ? 's' : ''}</span>
                         </div>
-                        <div className="flex flex-wrap gap-1 overflow-hidden">
-                          {usedByAgents.slice(0, 2).map(agent => (
+                        <div className="flex flex-wrap gap-1.5">
+                          {usedByAgents.slice(0, 3).map(agent => (
                             <span
                               key={agent.id}
-                              className="px-2 py-0.5 text-xs bg-accent-subtle text-accent rounded truncate max-w-[90px] inline-block"
+                              className="px-2.5 py-1 text-xs bg-bg-subtle text-fg-default rounded-md border border-stroke-divider truncate max-w-[120px] inline-block hover:bg-accent-subtle hover:text-accent hover:border-accent transition-colors"
                               title={agent.name}
                             >
                               {agent.name}
                             </span>
                           ))}
-                          {usedByAgents.length > 2 && (
-                            <span className="px-2 py-0.5 text-xs bg-bg-subtle text-fg-muted rounded">
-                              +{usedByAgents.length - 2}
+                          {usedByAgents.length > 3 && (
+                            <span className="px-2.5 py-1 text-xs bg-bg-subtle text-fg-muted rounded-md border border-stroke-divider">
+                              +{usedByAgents.length - 3} more
                             </span>
                           )}
                         </div>

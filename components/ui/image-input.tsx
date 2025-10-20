@@ -57,16 +57,16 @@ export function ImageInput({
       
       {selectedImage ? (
         <div className="relative inline-block">
-          <img 
-            src={selectedImage} 
-            alt="Selected" 
-            className="h-20 w-20 object-cover rounded border border-stroke-divider"
+          <img
+            src={selectedImage}
+            alt="Selected"
+            className="h-24 w-24 rounded-2xl border border-glass-border object-cover shadow-md"
           />
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-bg-card border border-stroke-divider"
+            className="absolute -top-2 -right-2 h-7 w-7 rounded-full border border-glass-border bg-glass-surface shadow-sm backdrop-blur-surface"
             onClick={handleRemoveImage}
             disabled={disabled}
           >
@@ -78,7 +78,7 @@ export function ImageInput({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-10 w-10 rounded-xl border border-dashed border-glass-border hover:border-accent-muted"
           onClick={handleButtonClick}
           disabled={disabled}
           aria-label="Add image"

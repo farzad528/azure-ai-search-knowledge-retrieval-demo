@@ -47,8 +47,8 @@ export function AgentCodeModal({
     return selectedKnowledgeBases.map(baseName => ({
       type: 'mcp',
       server_label: baseName.replace(/-/g, '_'),
-      server_url: `${searchEndpoint}/agents/${baseName}/mcp?api-version=2025-08-01-preview`,
-      allowed_tools: ['knowledge_agent_retrieve']
+      server_url: `${searchEndpoint}/knowledgebases/${baseName}/mcp?api-version=2025-11-01-preview`,
+      allowed_tools: ['knowledge_base_retrieve']
     }))
   }
 
@@ -115,8 +115,8 @@ mcp_tools = [${selectedKnowledgeBases.map(baseName => `
     {
         "type": "mcp",
         "server_label": "${baseName.replace(/-/g, '_')}",
-        "server_url": "${searchEndpoint}/agents/${baseName}/mcp?api-version=2025-08-01-preview",
-        "allowed_tools": ["knowledge_agent_retrieve"]
+  "server_url": "${searchEndpoint}/knowledgebases/${baseName}/mcp?api-version=2025-11-01-preview",
+  "allowed_tools": ["knowledge_base_retrieve"]
     }`).join(',')}
 ]
 

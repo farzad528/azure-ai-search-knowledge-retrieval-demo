@@ -24,7 +24,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { fetchAgents, createFoundryAgent } from '@/lib/api'
+import { fetchKnowledgeBases, createFoundryAgent } from '@/lib/api'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { AgentCodeModal } from '@/components/agent-code-modal'
 import { cn } from '@/lib/utils'
@@ -123,7 +123,7 @@ function AgentBuilderPageContent() {
               return tool.server_label.replace(/_/g, '-')
             }
             // Fallback: extract from URL
-            const urlMatch = tool.server_url?.match(/\/agents\/([^\/]+)\/mcp/)
+            const urlMatch = tool.server_url?.match(/\/knowledgebases\/([^\/]+)\/mcp/)
             return urlMatch ? urlMatch[1] : null
           }).filter(Boolean)
 
@@ -140,7 +140,7 @@ function AgentBuilderPageContent() {
   const loadKnowledgeBases = async () => {
     try {
       setLoading(true)
-      const data = await fetchAgents()
+  const data = await fetchKnowledgeBases()
       setKnowledgeBases(data.value || [])
       // Start with no knowledge bases selected by default
       setSelectedKnowledgeBases(new Set())
@@ -179,8 +179,8 @@ function AgentBuilderPageContent() {
         return {
           type: 'mcp',
           server_label: serverLabel,
-          server_url: `${process.env.NEXT_PUBLIC_SEARCH_ENDPOINT}/agents/${baseName}/mcp?api-version=${process.env.NEXT_PUBLIC_AZURE_SEARCH_API_VERSION || '2025-08-01-preview'}`,
-          allowed_tools: ['knowledge_agent_retrieve']
+          server_url: `${process.env.NEXT_PUBLIC_SEARCH_ENDPOINT}/knowledgebases/${baseName}/mcp?api-version=${process.env.NEXT_PUBLIC_AZURE_SEARCH_API_VERSION || '2025-11-01-preview'}`,
+          allowed_tools: ['knowledge_base_retrieve']
         }
       })
 
@@ -427,8 +427,8 @@ function AgentBuilderPageContent() {
         return {
           type: 'mcp',
           server_label: serverLabel,
-          server_url: `${process.env.NEXT_PUBLIC_SEARCH_ENDPOINT}/agents/${baseName}/mcp?api-version=${process.env.NEXT_PUBLIC_AZURE_SEARCH_API_VERSION || '2025-08-01-preview'}`,
-          allowed_tools: ['knowledge_agent_retrieve']
+          server_url: `${process.env.NEXT_PUBLIC_SEARCH_ENDPOINT}/knowledgebases/${baseName}/mcp?api-version=${process.env.NEXT_PUBLIC_AZURE_SEARCH_API_VERSION || '2025-11-01-preview'}`,
+          allowed_tools: ['knowledge_base_retrieve']
         }
       })
 

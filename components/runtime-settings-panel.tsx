@@ -11,10 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 interface RuntimeSettings {
+  retrievalReasoningEffort?: 'low' | 'medium' | 'high'
+  outputMode?: 'extractiveData' | 'answerSynthesis'
   knowledgeSourceParams?: Array<{
-    kind: 'searchIndex' | 'azureBlob'
+    kind: 'indexedOneLake' | 'searchIndex' | 'azureBlob' | 'remoteSharePoint' | 'indexedSharePoint' | 'web'
     knowledgeSourceName: string
     filterAddOn?: string
+    freshness?: 'day' | 'week' | 'month'
   }>
 }
 
@@ -25,14 +28,18 @@ interface RuntimeSettingsPanelProps {
   onSettingsChange: (settings: RuntimeSettings) => void
   knowledgeSources: Array<{
     name: string
-    kind: 'web' | 'searchIndex' | 'azureBlob'
+    kind: 'indexedOneLake' | 'searchIndex' | 'azureBlob' | 'remoteSharePoint' | 'indexedSharePoint' | 'web'
   }>
   className?: string
 }
 
 const kindIcons = {
+  indexedOneLake: Database20Regular,
   searchIndex: Database20Regular,
   azureBlob: FolderOpen20Regular,
+  remoteSharePoint: FolderOpen20Regular,
+  indexedSharePoint: Database20Regular,
+  web: Globe20Regular,
 }
 
 export function RuntimeSettingsPanel({
@@ -118,6 +125,61 @@ export function RuntimeSettingsPanel({
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Retrieval Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Retrieval settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField name="retrievalReasoningEffort">
+                    <FormLabel>Reasoning effort</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={localSettings.retrievalReasoningEffort || 'medium'}
+                        onValueChange={(value: 'low' | 'medium' | 'high') =>
+                          handleSettingsUpdate({ retrievalReasoningEffort: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select reasoning effort" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low - Faster responses</SelectItem>
+                          <SelectItem value="medium">Medium - Balanced</SelectItem>
+                          <SelectItem value="high">High - More thorough</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormDescription>
+                      Controls how deeply the system reasons through your knowledge sources
+                    </FormDescription>
+                  </FormField>
+
+                  <FormField name="outputMode">
+                    <FormLabel>Output mode</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={localSettings.outputMode || 'answerSynthesis'}
+                        onValueChange={(value: 'extractiveData' | 'answerSynthesis') =>
+                          handleSettingsUpdate({ outputMode: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select output mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="extractiveData">Extractive data - Return relevant chunks</SelectItem>
+                          <SelectItem value="answerSynthesis">Answer synthesis - Generate comprehensive answers</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormDescription>
+                      Choose between raw data extraction or synthesized answers
+                    </FormDescription>
+                  </FormField>
+                </CardContent>
+              </Card>
+
               {/* Knowledge Source Parameters */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">

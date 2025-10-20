@@ -81,7 +81,7 @@ export function Tooltip({ content, children, side = 'top', className }: TooltipP
         <div
           ref={tooltipRef}
           className={cn(
-            'fixed z-50 px-3 py-2 text-xs font-medium text-fg-on-accent bg-accent rounded-md shadow-lg pointer-events-none',
+            'pointer-events-none fixed z-50 rounded-lg border border-glass-border bg-fg-default/90 px-3 py-2 text-xs font-medium text-bg-card shadow-lg backdrop-blur-surface',
             'animate-in fade-in-0 zoom-in-95',
             className
           )}
@@ -93,7 +93,7 @@ export function Tooltip({ content, children, side = 'top', className }: TooltipP
           {content}
           <div
             className={cn(
-              'absolute w-2 h-2 bg-accent transform rotate-45',
+              'absolute h-2 w-2 rotate-45 bg-fg-default/90',
               side === 'top' && 'bottom-[-4px] left-1/2 -translate-x-1/2',
               side === 'bottom' && 'top-[-4px] left-1/2 -translate-x-1/2',
               side === 'left' && 'right-[-4px] top-1/2 -translate-y-1/2',

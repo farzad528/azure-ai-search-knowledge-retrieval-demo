@@ -3,7 +3,7 @@ interface ApiResponse<T> {
   nextLink?: string
 }
 
-interface Agent {
+interface KnowledgeBase {
   name: string
   description?: string
   models?: any[]
@@ -64,14 +64,12 @@ export async function fetchKnowledgeSources(): Promise<ApiResponse<any>> {
   return { value: all }
 }
 
-// NOTE: The backend API routes were renamed from "knowledgebases" to "agents".
-// Several UI areas (e.g. Playground) were still calling the old path and receiving 404s.
-// We now point all helper functions to /api/agents and keep this central so any future rename is single-touch.
-// If backward compatibility is ever required, you could add a small proxy route under /api/knowledgebases.
-const AGENTS_BASE_PATH = '/api/agents'
+// Central base path for the app router proxy that speaks to Azure AI Search knowledge bases.
+// Keeping the value in one place makes it easier to toggle between legacy and new endpoints during migrations.
+const KNOWLEDGE_BASES_BASE_PATH = '/api/knowledge-bases'
 
-export async function fetchAgents(): Promise<ApiResponse<Agent>> {
-  const response = await fetch(AGENTS_BASE_PATH, {
+export async function fetchKnowledgeBases(): Promise<ApiResponse<KnowledgeBase>> {
+  const response = await fetch(KNOWLEDGE_BASES_BASE_PATH, {
     cache: 'no-store',
     headers: {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -81,58 +79,58 @@ export async function fetchAgents(): Promise<ApiResponse<Agent>> {
   })
 
   if (!response.ok) {
-    throw new Error('Failed to fetch agents')
+    throw new Error('Failed to fetch knowledge bases')
   }
 
   return response.json()
 }
 
-export async function fetchAgent(id: string): Promise<Agent> {
-  const response = await fetch(`${AGENTS_BASE_PATH}/${id}`)
+export async function fetchKnowledgeBase(id: string): Promise<KnowledgeBase> {
+  const response = await fetch(`${KNOWLEDGE_BASES_BASE_PATH}/${id}`)
 
   if (!response.ok) {
-    throw new Error('Failed to fetch agent')
+    throw new Error('Failed to fetch knowledge base')
   }
 
   return response.json()
 }
 
-export async function updateAgent(agentId: string, agentData: Agent): Promise<Agent> {
+export async function updateKnowledgeBase(knowledgeBaseId: string, knowledgeBaseData: KnowledgeBase): Promise<KnowledgeBase> {
   const headers: HeadersInit = { 'Content-Type': 'application/json' }
 
-  if (agentData['@odata.etag']) {
-    headers['If-Match'] = agentData['@odata.etag']
+  if (knowledgeBaseData['@odata.etag']) {
+    headers['If-Match'] = knowledgeBaseData['@odata.etag']
   }
 
-  const response = await fetch(`${AGENTS_BASE_PATH}/${agentId}`, {
+  const response = await fetch(`${KNOWLEDGE_BASES_BASE_PATH}/${knowledgeBaseId}`, {
     method: 'PUT',
     headers,
-    body: JSON.stringify(agentData),
+    body: JSON.stringify(knowledgeBaseData),
   })
 
   if (!response.ok) {
     const errorData = await response.json()
-    throw new Error(errorData.error || 'Failed to update agent')
+  throw new Error(errorData.error || 'Failed to update knowledge base')
   }
 
   return response.json()
 }
 
-export async function deleteAgent(agentId: string): Promise<any> {
-  const response = await fetch(`${AGENTS_BASE_PATH}/${agentId}`, {
+export async function deleteKnowledgeBase(knowledgeBaseId: string): Promise<any> {
+  const response = await fetch(`${KNOWLEDGE_BASES_BASE_PATH}/${knowledgeBaseId}`, {
     method: 'DELETE',
   })
 
   if (!response.ok) {
     const errorData = await response.json()
-    throw new Error(errorData.error || 'Failed to delete agent')
+  throw new Error(errorData.error || 'Failed to delete knowledge base')
   }
 
   return response.json()
 }
 
-export async function retrieveFromAgent(
-  agentId: string,
+export async function retrieveFromKnowledgeBase(
+  knowledgeBaseId: string,
   messages: Message[],
   params: RetrieveParams = {}
 ): Promise<any> {
@@ -157,7 +155,7 @@ export async function retrieveFromAgent(
   const payload = { messages, ...params }
   delete payload.xMsUserToken
 
-  const response = await fetch(`${AGENTS_BASE_PATH}/${agentId}/retrieve`, {
+  const response = await fetch(`${KNOWLEDGE_BASES_BASE_PATH}/${knowledgeBaseId}/retrieve`, {
     method: 'POST',
     headers,
     body: JSON.stringify(payload),
@@ -165,24 +163,24 @@ export async function retrieveFromAgent(
 
   if (!response.ok) {
     const errorData = await response.json()
-    throw new Error(errorData.error || 'Failed to retrieve from agent')
+  throw new Error(errorData.error || 'Failed to retrieve from knowledge base')
   }
 
   return response.json()
 }
 
-export async function createAgent(agentData: Partial<Agent>): Promise<Agent> {
-  const response = await fetch(`${AGENTS_BASE_PATH}/create`, {
+export async function createKnowledgeBase(knowledgeBaseData: Partial<KnowledgeBase>): Promise<KnowledgeBase> {
+  const response = await fetch(`${KNOWLEDGE_BASES_BASE_PATH}/create`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(agentData),
+    body: JSON.stringify(knowledgeBaseData),
   })
 
   if (!response.ok) {
     const errorData = await response.json()
-    throw new Error(errorData.error || 'Failed to create agent')
+    throw new Error(errorData.error || 'Failed to create knowledge base')
   }
 
   return response.json()

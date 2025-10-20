@@ -23,21 +23,21 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className={cn(
-      'flex flex-col items-center justify-center py-12 px-6 text-center',
+      'flex flex-col items-center justify-center rounded-2xl border border-glass-border bg-glass-surface px-8 py-14 text-center shadow-md backdrop-blur-surface',
       className
     )}>
       {Icon && (
-        <div className="rounded-full bg-bg-subtle p-4 mb-4">
+        <div className="mb-6 rounded-full border border-glass-border bg-glass-surface p-4 shadow-xs">
           <Icon className="h-8 w-8 text-fg-muted" />
         </div>
       )}
       
-      <h3 className="text-lg font-semibold text-fg-default mb-2">
+      <h3 className="mb-3 text-xl font-semibold tracking-tight text-fg-default">
         {title}
       </h3>
       
       {description && (
-        <p className="text-fg-muted text-sm max-w-sm mb-6">
+        <p className="mb-6 max-w-sm text-sm text-fg-muted">
           {description}
         </p>
       )}

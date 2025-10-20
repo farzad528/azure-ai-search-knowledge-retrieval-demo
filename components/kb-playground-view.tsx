@@ -11,7 +11,7 @@ import { VoiceInput } from '@/components/ui/voice-input'
 import { ImageInput } from '@/components/ui/image-input'
 import { InlineCitationsText } from '@/components/inline-citations'
 import { SourceKindIcon } from '@/components/source-kind-icon'
-import { fetchAgents, retrieveFromAgent } from '../lib/api'
+import { fetchKnowledgeBases, retrieveFromKnowledgeBase } from '../lib/api'
 import { processImageFile } from '@/lib/imageProcessing'
 import { useConversationStarters } from '@/lib/conversationStarters'
 import { cn, formatRelativeTime, cleanTextSnippet } from '@/lib/utils'
@@ -99,7 +99,7 @@ export function KBPlaygroundView() {
     const loadAgents = async () => {
       try {
         setAgentsLoading(true)
-        const data = await fetchAgents()
+  const data = await fetchKnowledgeBases()
         const rawAgents = data.value || []
 
         const agentsList = rawAgents.map(agent => ({
@@ -253,7 +253,7 @@ export function KBPlaygroundView() {
         }
       ]
 
-      const response = await retrieveFromAgent(selectedAgent.id, azureMessages, runtimeSettings)
+  const response = await retrieveFromKnowledgeBase(selectedAgent.id, azureMessages, runtimeSettings)
 
       let assistantText = 'I apologize, but I was unable to generate a response.'
       if (response.response && response.response.length > 0) {
@@ -345,7 +345,7 @@ export function KBPlaygroundView() {
         }
       ]
 
-      const response = await retrieveFromAgent(selectedAgent.id, azureMessages, runtimeSettings)
+  const response = await retrieveFromKnowledgeBase(selectedAgent.id, azureMessages, runtimeSettings)
 
       let assistantText = 'I apologize, but I was unable to generate a response.'
       if (response.response && response.response.length > 0) {

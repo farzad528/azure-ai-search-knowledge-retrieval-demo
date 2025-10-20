@@ -9,7 +9,7 @@ export function LoadingSkeleton({ className }: LoadingSkeletonProps) {
   return (
     <div
       className={cn(
-        'animate-pulse rounded-md bg-bg-subtle',
+        'animate-pulse rounded-xl bg-overlay-soft/40 backdrop-blur-surface',
         className
       )}
     />

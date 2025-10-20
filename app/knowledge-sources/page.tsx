@@ -11,10 +11,10 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
 
-type KnowledgeSource = {
+interface KnowledgeSource {
   id: string
   name: string
-  kind: 'searchIndex' | 'web' | 'azureBlob'
+  kind: 'indexedOneLake' | 'searchIndex' | 'azureBlob' | 'remoteSharePoint' | 'indexedSharePoint' | 'web'
   docCount?: number
   lastUpdated?: string
   status?: string

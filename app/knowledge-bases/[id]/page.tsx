@@ -2,23 +2,24 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Play20Regular, Settings20Regular } from '@fluentui/react-icons'
+import { Play20Regular } from '@fluentui/react-icons'
 import { PageHeader } from '@/components/shared/page-header'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { KeyValue } from '@/components/shared/key-value'
 import { StatusPill } from '@/components/shared/status-pill'
-import { EditAgentForm } from '@/components/forms/edit-agent-form'
+import { EditKnowledgeBaseForm } from '@/components/forms/edit-knowledge-base-form'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
-import { fetchAgent, fetchKnowledgeSources, updateAgent, deleteAgent } from '../../../lib/api'
+import { fetchKnowledgeBase, fetchKnowledgeSources, updateKnowledgeBase, deleteKnowledgeBase } from '../../../lib/api'
 import { formatRelativeTime } from '@/lib/utils'
 
-type AgentData = {
+type KnowledgeBaseData = {
   name: string
   description?: string
   knowledgeSources?: Array<{
     name: string
+    kind?: string
     includeReferences?: boolean
     includeReferenceSourceData?: boolean | null
     alwaysQuerySource?: boolean | null
@@ -28,13 +29,13 @@ type AgentData = {
   models?: Array<{
     kind: string
     azureOpenAIParameters?: {
-      resourceUri: string
-      deploymentId: string
-      modelName: string
+      resourceUri?: string
+      deploymentId?: string
+      modelName?: string
     }
   }>
   outputConfiguration?: {
-    modality: string
+    modality: 'extractiveData' | 'answerSynthesis'
     answerInstructions?: string | null
     attemptFastPath?: boolean | null
     includeActivity?: boolean | null
@@ -55,12 +56,12 @@ type KnowledgeSource = {
   kind: string
 }
 
-export default function AgentDetailPage() {
+export default function KnowledgeBaseDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const agentId = params.id as string
+  const knowledgeBaseId = params.id as string
   
-  const [agent, setAgent] = useState<AgentData | null>(null)
+  const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBaseData | null>(null)
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -71,57 +72,57 @@ export default function AgentDetailPage() {
       setLoading(true)
       setError(null)
       
-      const [agentData, sourcesData] = await Promise.all([
-        fetchAgent(agentId),
+      const [knowledgeBaseData, sourcesData] = await Promise.all([
+        fetchKnowledgeBase(knowledgeBaseId),
         fetchKnowledgeSources()
       ])
       
-      console.log('Agent detail data:', agentData)
+      console.log('Knowledge base detail:', knowledgeBaseData)
       console.log('Knowledge sources data:', sourcesData)
       
-      setAgent(agentData)
+      setKnowledgeBase(knowledgeBaseData)
       setKnowledgeSources(sourcesData.value || [])
     } catch (err) {
-      console.error('Error loading agent:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load agent')
+      console.error('Error loading knowledge base:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load knowledge base')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    if (agentId) {
+    if (knowledgeBaseId) {
       loadData()
     }
-  }, [agentId])
+  }, [knowledgeBaseId])
 
-  const handleUpdateAgent = async (data: Partial<AgentData>) => {
-    if (!agent) return
+  const handleUpdateKnowledgeBase = async (data: Partial<KnowledgeBaseData>) => {
+    if (!knowledgeBase) return
 
     // Ensure required fields are included
     const payload = {
-      name: agent.name,
+      name: knowledgeBase.name,
       ...data,
-      ['@odata.etag']: agent?.['@odata.etag']
+      ['@odata.etag']: knowledgeBase?.['@odata.etag']
     }
-    await updateAgent(agentId, payload as any)
+    await updateKnowledgeBase(knowledgeBaseId, payload as any)
     await loadData() // Refresh data after update
   }
 
-  const handleDeleteAgent = async () => {
-    await deleteAgent(agentId)
+  const handleDeleteKnowledgeBase = async () => {
+    await deleteKnowledgeBase(knowledgeBaseId)
     router.push('/knowledge-bases')
   }
 
   if (loading) {
-    return <AgentDetailSkeleton />
+    return <KnowledgeBaseDetailSkeleton />
   }
 
-  if (error || !agent) {
+  if (error || !knowledgeBase) {
     return (
       <ErrorState
-        title="Failed to load agent"
-        description={error || 'Agent not found'}
+        title="Failed to load knowledge base"
+        description={error || 'Knowledge base not found'}
         action={{
           label: "Try again",
           onClick: loadData
@@ -133,15 +134,15 @@ export default function AgentDetailPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title={agent.name}
-        description={agent.description || 'Knowledge agent'}
-        status={agent.status ? {
-          label: agent.status,
-          variant: agent.status === 'active' ? 'success' : 'info'
+        title={knowledgeBase.name}
+        description={knowledgeBase.description || 'Knowledge base'}
+        status={knowledgeBase.status ? {
+          label: knowledgeBase.status,
+          variant: knowledgeBase.status === 'active' ? 'success' : 'info'
         } : undefined}
         primaryAction={{
           label: "Try now",
-          href: `/playground?agent=${agentId}`,
+          href: `/playground?knowledgeBase=${knowledgeBaseId}`,
           icon: Play20Regular
         }}
         backButton={{
@@ -158,27 +159,27 @@ export default function AgentDetailPage() {
 
         <TabsContent value="overview">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Agent Details */}
+            {/* Knowledge base details */}
             <Card>
               <CardHeader>
-                <CardTitle>Agent details</CardTitle>
+                <CardTitle>Knowledge base details</CardTitle>
               </CardHeader>
               <CardContent>
                 <KeyValue
                   items={[
                     {
                       key: 'Name',
-                      value: agent.name
+                      value: knowledgeBase.name
                     },
                     {
                       key: 'Model',
-                      value: agent.models?.[0]?.azureOpenAIParameters?.modelName || 'Default'
+                      value: knowledgeBase.models?.[0]?.azureOpenAIParameters?.modelName || 'Default'
                     },
                     {
                       key: 'Status',
-                      value: agent.status ? (
-                        <StatusPill variant={agent.status === 'active' ? 'success' : 'info'}>
-                          {agent.status}
+                      value: knowledgeBase.status ? (
+                        <StatusPill variant={knowledgeBase.status === 'active' ? 'success' : 'info'}>
+                          {knowledgeBase.status}
                         </StatusPill>
                       ) : (
                         <StatusPill variant="info">Active</StatusPill>
@@ -186,11 +187,11 @@ export default function AgentDetailPage() {
                     },
                     {
                       key: 'Last run',
-                      value: agent.lastRun ? formatRelativeTime(agent.lastRun) : 'Never run'
+                      value: knowledgeBase.lastRun ? formatRelativeTime(knowledgeBase.lastRun) : 'Never run'
                     },
                     {
                       key: 'Created by',
-                      value: agent.createdBy || 'Unknown'
+                      value: knowledgeBase.createdBy || 'Unknown'
                     }
                   ]}
                 />
@@ -203,9 +204,9 @@ export default function AgentDetailPage() {
                 <CardTitle>Knowledge sources</CardTitle>
               </CardHeader>
               <CardContent>
-                {agent.knowledgeSources?.length > 0 ? (
+                {knowledgeBase.knowledgeSources?.length > 0 ? (
                   <div className="space-y-2">
-                    {agent.knowledgeSources.map((source, index) => (
+                    {knowledgeBase.knowledgeSources.map((source, index) => (
                       <div
                         key={index}
                         className="flex items-center justify-between p-2 bg-bg-subtle rounded-md"
@@ -228,12 +229,12 @@ export default function AgentDetailPage() {
         <TabsContent value="settings">
           <Card>
             <CardContent className="p-0">
-              <EditAgentForm
-                agent={agent}
+              <EditKnowledgeBaseForm
+                knowledgeBase={knowledgeBase}
                 knowledgeSources={knowledgeSources}
-                onSubmit={handleUpdateAgent}
+                onSubmit={handleUpdateKnowledgeBase}
                 onCancel={() => setActiveTab('overview')}
-                onDelete={handleDeleteAgent}
+                onDelete={handleDeleteKnowledgeBase}
               />
             </CardContent>
           </Card>
@@ -243,7 +244,7 @@ export default function AgentDetailPage() {
   )
 }
 
-function AgentDetailSkeleton() {
+function KnowledgeBaseDetailSkeleton() {
   return (
     <div className="space-y-8">
       <div className="pb-6 border-b border-stroke-divider">

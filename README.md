@@ -31,7 +31,7 @@ Copy `.env.example` to `.env.local` and configure:
 # Azure AI Search
 AZURE_SEARCH_ENDPOINT=https://your-search.search.windows.net
 AZURE_SEARCH_API_KEY=your-search-admin-key
-AZURE_SEARCH_API_VERSION=2025-08-01-preview
+AZURE_SEARCH_API_VERSION=2025-11-01-preview
 
 # Azure OpenAI (Standalone for higher rate limits)
 NEXT_PUBLIC_STANDALONE_AOAI_ENDPOINT=https://your-openai.openai.azure.com

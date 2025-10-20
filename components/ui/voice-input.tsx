@@ -154,8 +154,8 @@ export function VoiceInput({ onTranscript, className, disabled }: VoiceInputProp
       variant="ghost"
       size="icon"
       className={cn(
-        'h-8 w-8 transition-all duration-200',
-        isListening && 'text-accent bg-accent-subtle animate-pulse scale-110 border-2 border-accent',
+        'h-10 w-10 rounded-full border border-glass-border bg-glass-surface shadow-xs transition-all duration-fast ease-out hover:border-accent-muted hover:shadow-md',
+        isListening && 'scale-105 border-accent bg-accent-subtle text-accent shadow-glow',
         className
       )}
       onClick={toggleListening}

@@ -4,61 +4,92 @@
 
 @layer base {
   :root {
-    /* Light mode colors */
-    --color-bg-canvas: 0, 0%, 98%;
-    --color-bg-subtle: 210, 20%, 96%;
-    --color-bg-card: 0, 0%, 100%;
-    --color-bg-hover: 210, 20%, 94%;
-    --color-bg-pressed: 210, 20%, 92%;
+    color-scheme: light;
 
-    --color-fg-default: 220, 9%, 13%;
-    --color-fg-muted: 220, 9%, 46%;
-    --color-fg-subtle: 220, 9%, 65%;
-    --color-fg-on-accent: 0, 0%, 100%;
+    /* Light surface tokens */
+    --color-bg-canvas: 224 40% 97%;
+    --color-bg-subtle: 226 45% 94%;
+    --color-bg-card: 0 0% 100%;
+    --color-bg-elevated: 226 48% 98%;
+    --color-bg-hover: 226 82% 96%;
+    --color-bg-pressed: 228 88% 90%;
 
-    --color-accent-default: 221, 83%, 53%;
-    --color-accent-hover: 221, 83%, 48%;
-    --color-accent-pressed: 221, 83%, 43%;
-    --color-accent-subtle: 221, 60%, 95%;
-    --color-accent-muted: 221, 60%, 88%;
+    --color-fg-default: 234 44% 14%;
+    --color-fg-muted: 228 22% 44%;
+    --color-fg-subtle: 228 18% 60%;
+    --color-fg-on-accent: 0 0% 100%;
 
-    --color-stroke-divider: 220, 13%, 91%;
-    --color-stroke-strong: 220, 13%, 82%;
-    --color-stroke-focus: 221, 83%, 53%;
+    --color-accent-default: 258 92% 64%;
+    --color-accent-hover: 258 92% 60%;
+    --color-accent-pressed: 258 92% 52%;
+    --color-accent-subtle: 258 92% 94%;
+    --color-accent-muted: 258 75% 86%;
+    --color-accent-glow: 258 100% 72%;
+    --color-accent-gradient-from: 258 96% 68%;
+    --color-accent-gradient-to: 281 96% 67%;
 
-    --color-status-success: 142, 76%, 36%;
-    --color-status-warning: 38, 92%, 50%;
-    --color-status-danger: 0, 84%, 60%;
-    --color-status-info: 221, 83%, 53%;
+    --color-stroke-divider: 228 24% 84%;
+    --color-stroke-strong: 226 24% 70%;
+    --color-stroke-focus: 258 92% 64%;
+
+    --color-status-success: 146 62% 40%;
+    --color-status-warning: 35 96% 54%;
+    --color-status-danger: 346 82% 56%;
+    --color-status-info: 214 94% 68%;
+
+    --color-overlay-soft: 228 28% 88%;
+    --color-overlay-strong: 258 92% 64%;
+
+    --color-glass-surface: hsla(0, 0%, 100%, 0.72);
+    --color-glass-hover: hsla(226, 52%, 96%, 0.82);
+    --color-glass-border: hsla(228, 60%, 78%, 0.45);
+
+    --shadow-color: 227 32% 12%;
+    --shadow-glow: 264 96% 70%;
   }
 
   .dark {
-    /* Dark mode colors */
-    --color-bg-canvas: 220, 13%, 9%;
-    --color-bg-subtle: 220, 13%, 15%;
-    --color-bg-card: 220, 13%, 13%;
-    --color-bg-hover: 220, 13%, 18%;
-    --color-bg-pressed: 220, 13%, 21%;
+    color-scheme: dark;
 
-    --color-fg-default: 0, 0%, 95%;
-    --color-fg-muted: 220, 9%, 65%;
-    --color-fg-subtle: 220, 9%, 46%;
-    --color-fg-on-accent: 0, 0%, 100%;
+    --color-bg-canvas: 246 44% 6%;
+    --color-bg-subtle: 248 44% 10%;
+    --color-bg-card: 248 36% 14%;
+    --color-bg-elevated: 248 38% 16%;
+    --color-bg-hover: 248 38% 18%;
+    --color-bg-pressed: 248 36% 22%;
 
-    --color-accent-default: 221, 83%, 60%;
-    --color-accent-hover: 221, 83%, 65%;
-    --color-accent-pressed: 221, 83%, 70%;
-    --color-accent-subtle: 221, 60%, 20%;
-    --color-accent-muted: 221, 60%, 25%;
+    --color-fg-default: 220 40% 96%;
+    --color-fg-muted: 225 28% 72%;
+    --color-fg-subtle: 226 22% 52%;
+    --color-fg-on-accent: 0 0% 100%;
 
-    --color-stroke-divider: 220, 13%, 20%;
-    --color-stroke-strong: 220, 13%, 28%;
-    --color-stroke-focus: 221, 83%, 60%;
+    --color-accent-default: 263 100% 70%;
+    --color-accent-hover: 265 100% 64%;
+    --color-accent-pressed: 268 100% 58%;
+    --color-accent-subtle: 268 86% 20%;
+    --color-accent-muted: 266 78% 32%;
+    --color-accent-glow: 263 100% 72%;
+    --color-accent-gradient-from: 260 100% 66%;
+    --color-accent-gradient-to: 284 100% 68%;
 
-    --color-status-success: 142, 76%, 50%;
-    --color-status-warning: 38, 92%, 60%;
-    --color-status-danger: 0, 84%, 70%;
-    --color-status-info: 221, 83%, 60%;
+    --color-stroke-divider: 244 26% 24%;
+    --color-stroke-strong: 244 30% 36%;
+    --color-stroke-focus: 265 100% 64%;
+
+    --color-status-success: 146 62% 50%;
+    --color-status-warning: 35 96% 60%;
+    --color-status-danger: 346 82% 64%;
+    --color-status-info: 214 94% 70%;
+
+    --color-overlay-soft: 244 40% 16%;
+    --color-overlay-strong: 263 100% 64%;
+
+    --color-glass-surface: hsla(247, 42%, 14%, 0.68);
+    --color-glass-hover: hsla(250, 48%, 22%, 0.74);
+    --color-glass-border: hsla(265, 70%, 52%, 0.45);
+
+    --shadow-color: 246 42% 10%;
+    --shadow-glow: 264 100% 72%;
   }
 
   * {
@@ -71,12 +102,22 @@
 
   body {
     @apply bg-bg-canvas text-fg-default font-sans antialiased;
+    min-height: 100vh;
+  background-image: radial-gradient(circle at top, hsl(var(--color-accent-gradient-from) / 0.12), transparent 55%), radial-gradient(circle at 20% 20%, hsl(var(--color-accent-gradient-to) / 0.08), transparent 45%);
+    background-attachment: fixed;
     font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  ::selection {
+    background-color: hsl(var(--color-accent-default) / 0.24);
+    color: hsl(var(--color-fg-on-accent));
   }
 
   /* Focus outline */
   *:focus-visible {
-    @apply outline-2 outline-offset-2 outline-stroke-focus;
+    outline: 2px solid hsl(var(--color-stroke-focus));
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px hsl(var(--color-stroke-focus) / 0.18);
   }
 
   /* Reduce motion for accessibility */
@@ -100,6 +141,7 @@
 
   /* Text truncation utility */
   .line-clamp-3 {
+    line-clamp: 3;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -108,32 +150,18 @@
 }
 
 @layer utilities {
-  /* Gentle animations */
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateX(100%);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
+  /* Glassmorphism helpers */
+  .glass-panel {
+    background: var(--color-glass-surface);
+    border: 1px solid var(--color-glass-border);
+    backdrop-filter: blur(20px);
   }
 
-  .animate-slide-in {
-    animation: slideIn 200ms ease-out;
+  .glass-panel:hover {
+    background: var(--color-glass-hover);
   }
 
-  /* Elevation utilities */
-  .elevation-sm {
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  }
-
-  .elevation-md {
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  }
-
-  .elevation-lg {
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  .focus-ring {
+    box-shadow: 0 0 0 3px hsl(var(--color-stroke-focus) / 0.2);
   }
 }

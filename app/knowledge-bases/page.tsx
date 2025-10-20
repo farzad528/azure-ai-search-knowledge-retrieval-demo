@@ -2,25 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { Search20Regular, Add20Regular } from '@fluentui/react-icons'
-import { fetchAgents, fetchKnowledgeSources } from '../../lib/api'
+import { fetchKnowledgeBases, fetchKnowledgeSources } from '../../lib/api'
 import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { KnowledgeAgentCard } from '@/components/knowledge-agent-card'
+import { KnowledgeBaseCard, KnowledgeBaseSummary } from '@/components/knowledge-base-card'
 import { EmptyState } from '@/components/shared/empty-state'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
-import { CreateAgentForm } from '@/components/forms/create-agent-form'
-
-type KnowledgeAgent = {
-  id: string
-  name: string
-  model?: string
-  sources: string[]
-  status?: string
-  lastRun?: string
-  createdBy?: string
-}
+import { CreateKnowledgeBaseForm } from '@/components/forms/create-knowledge-base-form'
 
 type KnowledgeSource = {
   id: string
@@ -29,34 +19,48 @@ type KnowledgeSource = {
 }
 
 export default function KnowledgeAgentsPage() {
-  const [agents, setAgents] = useState<KnowledgeAgent[]>([])
+  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseSummary[]>([])
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [showCreateAgent, setShowCreateAgent] = useState(false)
+  const [showCreateKnowledgeBase, setShowCreateKnowledgeBase] = useState(false)
 
   const loadData = async () => {
     try {
       setLoading(true)
       setError(null)
       const [agentsData, sourcesData] = await Promise.all([
-        fetchAgents(),
+        fetchKnowledgeBases(),
         fetchKnowledgeSources()
       ])
 
       // Map API response to KnowledgeAgent type
-      const mappedAgents = (agentsData.value || []).map((agent: any) => ({
-        id: agent.name,
-        name: agent.name,
-        model: agent.models?.[0]?.azureOpenAIParameters?.modelName,
-        sources: (agent.knowledgeSources || []).map((ks: any) => ks.name),
-        status: 'active',
-        lastRun: null,
-        createdBy: null
-      }))
+      const sourceKindMap = new Map<string, string>()
+      ;(sourcesData.value || []).forEach((source: any) => {
+        if (source?.name) {
+          sourceKindMap.set(source.name, source.kind || 'unknown')
+        }
+      })
 
-      setAgents(mappedAgents)
+      const mappedKnowledgeBases = (agentsData.value || []).map((base: any) => {
+        const sources = (base.knowledgeSources || []).map((ks: any) => ks.name)
+        return {
+          id: base.name,
+          name: base.name,
+          model: base.models?.[0]?.azureOpenAIParameters?.modelName,
+          sources,
+          sourceDetails: sources.map((name: string) => ({
+            name,
+            kind: sourceKindMap.get(name) || 'unknown'
+          })),
+          status: base.status || 'active',
+          lastRun: base.lastUpdatedOn || base.lastModifiedOn || null,
+          createdBy: base.createdBy || null
+        }
+      })
+
+      setKnowledgeBases(mappedKnowledgeBases)
       setKnowledgeSources(sourcesData.value || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data')
@@ -69,8 +73,8 @@ export default function KnowledgeAgentsPage() {
     loadData()
   }, [])
 
-  const filteredAgents = agents.filter(agent =>
-    agent.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredKnowledgeBases = knowledgeBases.filter(base =>
+    base.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   if (loading) {
@@ -80,7 +84,7 @@ export default function KnowledgeAgentsPage() {
   if (error) {
     return (
       <ErrorState
-        title="Failed to load knowledge agents"
+        title="Failed to load knowledge bases"
         description={error}
         action={{
           label: "Try again",
@@ -97,7 +101,7 @@ export default function KnowledgeAgentsPage() {
         description="Manage and configure knowledge bases for grounded retrieval across your enterprise knowledge."
         primaryAction={{
           label: "Create knowledge base",
-          onClick: () => setShowCreateAgent(true),
+          onClick: () => setShowCreateKnowledgeBase(true),
           icon: Add20Regular
         }}
       />
@@ -107,7 +111,7 @@ export default function KnowledgeAgentsPage() {
         <div className="relative">
           <Search20Regular className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-fg-muted" />
           <Input
-            placeholder="Search knowledge agents..."
+            placeholder="Search knowledge bases..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -116,43 +120,43 @@ export default function KnowledgeAgentsPage() {
       </div>
 
       {/* Create Agent Form */}
-      {showCreateAgent && (
+      {showCreateKnowledgeBase && (
         <div className="mb-8">
-          <CreateAgentForm
+          <CreateKnowledgeBaseForm
             knowledgeSources={knowledgeSources}
             onSubmit={async (data) => {
-              console.log('Creating agent:', data)
-              setShowCreateAgent(false)
+              console.log('Creating knowledge base:', data)
+              setShowCreateKnowledgeBase(false)
               await loadData()
             }}
-            onCancel={() => setShowCreateAgent(false)}
+            onCancel={() => setShowCreateKnowledgeBase(false)}
           />
         </div>
       )}
 
       {/* Agents grid */}
-      {!showCreateAgent && (
+      {!showCreateKnowledgeBase && (
         <>
-          {filteredAgents.length === 0 ? (
-            agents.length === 0 ? (
+          {filteredKnowledgeBases.length === 0 ? (
+            knowledgeBases.length === 0 ? (
               <EmptyState
-                title="No knowledge agents"
-                description="Create your first agent to start chatting with your knowledge sources."
+                title="No knowledge bases"
+                description="Create your first knowledge base to start chatting with your knowledge sources."
                 action={{
-                  label: "Create agent",
-                  onClick: () => setShowCreateAgent(true)
+                  label: "Create knowledge base",
+                  onClick: () => setShowCreateKnowledgeBase(true)
                 }}
               />
             ) : (
               <EmptyState
-                title="No matching agents"
-                description={`No knowledge agents match "${searchQuery}".`}
+                title="No matching knowledge bases"
+                description={`No knowledge bases match "${searchQuery}".`}
               />
             )
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredAgents.map((agent) => (
-                <KnowledgeAgentCard key={agent.id} agent={agent} />
+              {filteredKnowledgeBases.map((base) => (
+                <KnowledgeBaseCard key={base.id} knowledgeBase={base} />
               ))}
             </div>
           )}

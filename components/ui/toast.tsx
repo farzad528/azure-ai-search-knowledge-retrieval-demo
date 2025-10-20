@@ -62,7 +62,7 @@ function ToastContainer() {
   const { toasts } = useToast()
 
   return (
-    <div className="fixed top-4 right-4 z-50 w-96">
+    <div className="fixed right-6 top-6 z-50 w-96">
       <AnimatePresence>
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} />
@@ -75,22 +75,22 @@ function ToastContainer() {
 const toastConfig = {
   success: {
     icon: CheckmarkCircle20Regular,
-    className: 'border-status-success bg-status-success/10',
+    className: 'ring-1 ring-status-success/40',
     iconClassName: 'text-status-success',
   },
   error: {
     icon: ErrorCircle20Regular,
-    className: 'border-status-danger bg-status-danger/10',
+    className: 'ring-1 ring-status-danger/40',
     iconClassName: 'text-status-danger',
   },
   warning: {
     icon: Warning20Regular,
-    className: 'border-status-warning bg-status-warning/10',
+    className: 'ring-1 ring-status-warning/40',
     iconClassName: 'text-status-warning',
   },
   info: {
     icon: Info20Regular,
-    className: 'border-status-info bg-status-info/10',
+    className: 'ring-1 ring-status-info/40',
     iconClassName: 'text-status-info',
   },
 }
@@ -107,20 +107,19 @@ function ToastItem({ toast }: { toast: Toast }) {
       exit={{ opacity: 0, x: 300, scale: 0.5 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
       className={cn(
-        'mb-4 rounded-lg border p-4 shadow-lg backdrop-blur-sm',
-        'bg-bg-card/95',
+        'mb-4 rounded-2xl border border-glass-border/70 bg-glass-surface p-5 shadow-lg backdrop-blur-elevated transition-shadow duration-base ease-out hover:shadow-glow',
         config.className
       )}
     >
       <div className="flex items-start gap-3">
-        <Icon className={cn('h-5 w-5 flex-shrink-0 mt-0.5', config.iconClassName)} />
+        <Icon className={cn('mt-0.5 h-5 w-5 flex-shrink-0', config.iconClassName)} />
         
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-semibold text-fg-default">
+          <h4 className="text-sm font-semibold tracking-tight text-fg-default">
             {toast.title}
           </h4>
           {toast.description && (
-            <p className="text-sm text-fg-muted mt-1">
+            <p className="mt-1 text-sm text-fg-muted">
               {toast.description}
             </p>
           )}
@@ -128,7 +127,7 @@ function ToastItem({ toast }: { toast: Toast }) {
         
         <button
           onClick={() => dismiss(toast.id)}
-          className="flex-shrink-0 p-1 rounded hover:bg-bg-hover transition-colors"
+          className="flex-shrink-0 rounded-full p-1.5 text-fg-subtle transition-colors duration-fast hover:bg-glass-hover hover:text-fg-default"
           aria-label="Dismiss notification"
         >
           <Dismiss20Regular className="h-4 w-4" />

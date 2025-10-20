@@ -18,7 +18,7 @@ import { SourceKindIcon } from '@/components/source-kind-icon'
 import { aggregateKinds, SourceKind } from '@/lib/sourceKinds'
 import { InlineCitationsText } from '@/components/inline-citations'
 import { Tooltip } from '@/components/ui/tooltip'
-import { fetchAgents, retrieveFromAgent } from '../lib/api'
+import { fetchKnowledgeBases, retrieveFromKnowledgeBase } from '../lib/api'
 import { processImageFile, ProcessedImageResult } from '@/lib/imageProcessing'
 import { useConversationStarters } from '@/lib/conversationStarters'
 import { cn, formatRelativeTime, cleanTextSnippet } from '@/lib/utils'
@@ -28,16 +28,15 @@ type KnowledgeAgent = {
   name: string
   model?: string
   sources: string[]
+  sourcesWithKinds?: Array<{
+    name: string
+    kind: 'indexedOneLake' | 'searchIndex' | 'azureBlob' | 'remoteSharePoint' | 'indexedSharePoint' | 'web'
+  }>
   status?: string
   outputConfiguration?: { modality?: string; answerInstructions?: string }
   retrievalInstructions?: string
   knowledgeSources?: Array<{
     name: string
-    includeReferences?: boolean
-    includeReferenceSourceData?: boolean | null
-    alwaysQuerySource?: boolean | null
-    maxSubQueries?: number | null
-    rerankerThreshold?: number | null
   }>
 }
 
@@ -117,20 +116,34 @@ export function PlaygroundView() {
     const loadAgents = async () => {
       try {
         setAgentsLoading(true)
-        const data = await fetchAgents()
+  const data = await fetchKnowledgeBases()
         const rawAgents = data.value || []
         
+        // Fetch knowledge sources to get their kinds
+        const ksResponse = await fetch('/api/knowledge-sources', {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+        })
+        const ksData = ksResponse.ok ? await ksResponse.json() : { value: [] }
+        const sourceKindMap = new Map(
+          (ksData.value || []).map((ks: any) => [ks.name, ks.kind])
+        )
+
         // Map agents with proper structure from actual Azure API
-        const agentsList = rawAgents.map(agent => ({
+        const agentsList: KnowledgeAgent[] = rawAgents.map(agent => ({
           id: agent.name,
           name: agent.name,
           model: agent.models?.[0]?.azureOpenAIParameters?.modelName,
-            sources: (agent.knowledgeSources || []).map(ks => ks.name),
+          sources: (agent.knowledgeSources || []).map((ks: any) => ks.name),
+          sourcesWithKinds: (agent.knowledgeSources || []).map((ks: any) => ({
+            name: ks.name,
+            kind: (sourceKindMap.get(ks.name) || 'searchIndex') as 'indexedOneLake' | 'searchIndex' | 'azureBlob' | 'remoteSharePoint' | 'indexedSharePoint' | 'web'
+          })),
           status: 'active',
           description: agent.description,
           outputConfiguration: agent.outputConfiguration,
           retrievalInstructions: agent.retrievalInstructions,
-          knowledgeSources: agent.knowledgeSources
+          knowledgeSources: (agent.knowledgeSources || []).map((ks: any) => ({ name: ks.name }))
         }))
         
         setAgents(agentsList)
@@ -270,7 +283,7 @@ export function PlaygroundView() {
       { role: 'user' as const, content: await Promise.all(contentParts.map(convertContent)) }
     ]
     try {
-      const response = await retrieveFromAgent(selectedAgent.id, azureMessages, runtimeSettings)
+  const response = await retrieveFromKnowledgeBase(selectedAgent.id, azureMessages, runtimeSettings)
       let assistantText = 'I apologize, but I was unable to generate a response.'
       if (response.response && response.response.length > 0) {
         const rc = response.response[0].content
@@ -374,7 +387,7 @@ export function PlaygroundView() {
     //  - Long side >2048px yields no extra model detail (will be downscaled internally).
     //  - Ensuring short side >= ~768px (without upscaling beyond original) preserves high-detail tiling ceiling.
     //  - Compression targets <=4MB to avoid unnecessary bandwidth while safely under platform limits.
-    //  - No 'detail' property is sent (API version 2025-08-01-preview does not support it); we just provide a data URL.
+  //  - No 'detail' property is sent (API version 2025-11-01-preview does not support it); we just provide a data URL.
     if (images.length >= 10) { setImageWarning('Maximum of 10 images reached'); return }
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
     setImages(prev => [...prev, { id, dataUrl: imageUrl, status: 'processing' }])
@@ -805,7 +818,7 @@ export function PlaygroundView() {
         onClose={() => setRuntimeSettingsOpen(false)}
         settings={runtimeSettings}
         onSettingsChange={(settings) => setRuntimeSettings(settings as any)}
-        knowledgeSources={selectedAgent?.sources?.map(name => ({ name, kind: 'searchIndex' })) || []}
+        knowledgeSources={selectedAgent?.sourcesWithKinds || []}
       />
 
       {/* View Code Modal */}
@@ -827,8 +840,8 @@ export function PlaygroundView() {
 function MessageBubble({ message, onOpenDocument, agent }: { message: Message, onOpenDocument?: (url: string) => void, agent?: KnowledgeAgent }) {
   const [expanded, setExpanded] = useState(false)
   
-  // Check if any knowledge source has includeReferenceSourceData enabled
-  const shouldShowSnippets = agent?.knowledgeSources?.some(ks => ks.includeReferenceSourceData === true)
+  // Always show snippets if available (includeReferenceSourceData removed in November API)
+  const shouldShowSnippets = true
   const isUser = message.role === 'user'
 
   return (

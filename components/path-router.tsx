@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 interface PathRouterProps {
-  initialAgents: any[]
+  initialKnowledgeBases: any[]
   initialKnowledgeSources: any[]
   initialError: string | null
 }
 
-export function PathRouter({ initialAgents, initialKnowledgeSources, initialError }: PathRouterProps) {
+export function PathRouter({ initialKnowledgeBases, initialKnowledgeSources, initialError }: PathRouterProps) {
   const { selectedPath } = usePath()
   const router = useRouter()
 

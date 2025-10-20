@@ -25,10 +25,10 @@ interface PageHeaderProps {
 }
 
 const statusVariants = {
-  success: 'bg-status-success text-fg-on-accent',
-  warning: 'bg-status-warning text-fg-on-accent',
-  danger: 'bg-status-danger text-fg-on-accent',
-  info: 'bg-status-info text-fg-on-accent',
+  success: 'bg-status-success/15 text-status-success ring-status-success/40',
+  warning: 'bg-status-warning/15 text-status-warning ring-status-warning/40',
+  danger: 'bg-status-danger/15 text-status-danger ring-status-danger/40',
+  info: 'bg-status-info/15 text-status-info ring-status-info/40',
 }
 
 export function PageHeader({ 
@@ -40,12 +40,12 @@ export function PageHeader({
   className 
 }: PageHeaderProps) {
   return (
-    <div className={cn('pb-6 border-b border-stroke-divider', className)}>
+    <div className={cn('rounded-2xl border border-glass-border bg-glass-surface px-6 py-6 shadow-md backdrop-blur-surface', className)}>
       {backButton && (
         <div className="mb-4">
           <Link
             href={backButton.href}
-            className="inline-flex items-center gap-2 text-sm text-fg-muted hover:text-fg-default transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-fg-muted transition-colors duration-fast hover:text-fg-default"
           >
             <ChevronLeft20Regular className="h-4 w-4" />
             {backButton.label || 'Back'}
@@ -55,14 +55,14 @@ export function PageHeader({
       
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-semibold text-fg-default truncate">
+          <div className="mb-2 flex items-center gap-3">
+            <h1 className="truncate text-3xl font-semibold tracking-tight text-fg-default">
               {title}
             </h1>
             {status && (
               <span
                 className={cn(
-                  'inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-medium',
+                  'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ring-1',
                   statusVariants[status.variant]
                 )}
               >
@@ -72,7 +72,7 @@ export function PageHeader({
           </div>
           
           {description && (
-            <p className="text-fg-muted text-lg leading-relaxed">
+            <p className="text-lg leading-relaxed text-fg-muted">
               {description}
             </p>
           )}

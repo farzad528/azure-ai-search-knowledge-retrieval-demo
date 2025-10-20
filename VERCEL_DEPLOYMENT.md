@@ -109,7 +109,7 @@ Find this in Azure AI Foundry Studio:
 | `FOUNDRY_API_VERSION` | `2025-05-01` | `2025-05-01` |
 | `AZURE_SEARCH_ENDPOINT` | Your Search service endpoint | `https://my-search.search.windows.net` |
 | `AZURE_SEARCH_API_KEY` | Your Search API key | `ABC123...` |
-| `AZURE_SEARCH_API_VERSION` | `2025-08-01-preview` | `2025-08-01-preview` |
+| `AZURE_SEARCH_API_VERSION` | `2025-11-01-preview` | `2025-11-01-preview` |
 | `NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT` | Your OpenAI endpoint | `https://my-openai.openai.azure.com` |
 | `AZURE_OPENAI_API_KEY` | Your OpenAI API key | `DEF456...` |
 | `NEXT_PUBLIC_STANDALONE_AOAI_ENDPOINT` | (Optional) Standalone OpenAI endpoint | `https://my-standalone.openai.azure.com` |

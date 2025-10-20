@@ -1,45 +1,46 @@
 import * as z from 'zod'
 
-// Knowledge Agent validation schema
-export const createAgentSchema = z.object({
+// Knowledge base creation validation schema aligned with Search 2025-11-01-preview.
+export const createKnowledgeBaseSchema = z.object({
   name: z
     .string()
-    .min(1, 'Agent name is required')
-    .max(100, 'Agent name must be less than 100 characters')
-    .regex(/^[a-zA-Z0-9\s\-_]+$/, 'Agent name can only contain letters, numbers, spaces, hyphens, and underscores'),
-  
+    .min(1, 'Knowledge base name is required')
+    .max(64, 'Knowledge base name must be 64 characters or less')
+    .regex(/^[a-zA-Z0-9\s\-_]+$/, 'Name can only contain letters, numbers, spaces, hyphens, and underscores'),
   description: z
     .string()
-    .max(500, 'Description must be less than 500 characters')
+    .max(500, 'Description must be 500 characters or less')
     .optional(),
-  
-  model: z
+  modelDeployment: z
     .string()
     .min(1, 'Model selection is required'),
-  
-  temperature: z
+  outputModality: z.enum(['extractiveData', 'answerSynthesis']),
+  answerInstructions: z
+    .string()
+    .max(500, 'Answer instructions must be 500 characters or less')
+    .optional(),
+  retrievalInstructions: z
+    .string()
+    .max(500, 'Retrieval instructions must be 500 characters or less')
+    .optional(),
+  includeReferences: z.boolean(),
+  includeReferenceSourceData: z.boolean(),
+  alwaysQuerySource: z.boolean(),
+  maxSubQueries: z
     .number()
-    .min(0, 'Temperature must be at least 0')
-    .max(2, 'Temperature must be at most 2')
-    .default(0.7),
-  
-  maxTokens: z
+    .min(1, 'Minimum 1 sub-query')
+  .max(20, 'Maximum 20 sub-queries'),
+  rerankerThreshold: z
     .number()
-    .min(1, 'Max tokens must be at least 1')
-    .max(4000, 'Max tokens must be at most 4000')
-    .default(1000),
-  
+    .min(0, 'Minimum threshold is 0.0')
+    .max(5, 'Maximum threshold is 5.0'),
+  includeActivity: z.boolean(),
   sources: z
     .array(z.string())
-    .min(1, 'At least one knowledge source is required'),
-  
-  systemPrompt: z
-    .string()
-    .max(2000, 'System prompt must be less than 2000 characters')
-    .optional(),
+    .min(1, 'Select at least one knowledge source'),
 })
 
-export type CreateAgentFormData = z.infer<typeof createAgentSchema>
+export type CreateKnowledgeBaseFormData = z.infer<typeof createKnowledgeBaseSchema>
 
 // Knowledge Source validation schema  
 export const createSourceSchema = z.object({
