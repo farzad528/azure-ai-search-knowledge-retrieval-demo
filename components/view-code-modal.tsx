@@ -31,6 +31,20 @@ export function ViewCodeModal({ isOpen, onClose, agentId, agentName, messages }:
   const [copiedCode, setCopiedCode] = React.useState<string | null>(null)
   const [selectedLanguage, setSelectedLanguage] = React.useState('curl')
 
+  // Lock body scroll when modal is open to prevent double scrollbar (page + modal)
+  React.useEffect(() => {
+    if (isOpen) {
+      const prevBody = document.body.style.overflow
+      const prevHtml = document.documentElement.style.overflow
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = prevBody
+        document.documentElement.style.overflow = prevHtml
+      }
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   const copyCode = async (code: string, language: string) => {
@@ -41,7 +55,7 @@ export function ViewCodeModal({ isOpen, onClose, agentId, agentName, messages }:
 
   // Code snippets based on Microsoft documentation
   const curlCode = `# Retrieve from knowledge agent using REST API
-curl -X POST "https://{search-service}.search.windows.net/agents/${agentId}/retrieve?api-version=2025-08-01-preview" \\
+curl -X POST "https://{search-service}.search.windows.net/agents/${agentId}/retrieve?api-version=2025-11-01-preview" \\
   -H "Content-Type: application/json" \\
   -H "api-key: {search-admin-api-key}" \\
   -d '{
@@ -310,7 +324,7 @@ if (response.Activity != null)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2">
-      <div className="bg-bg-canvas border border-stroke-divider rounded-lg w-[95vw] max-w-[1400px] h-[92vh] overflow-hidden">
+      <div className="bg-bg-canvas border border-stroke-divider rounded-lg w-[95vw] max-w-[1400px] max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-stroke-divider">
           <div>
@@ -324,8 +338,8 @@ if (response.Activity != null)
           </Button>
         </div>
 
-        {/* Content */}
-        <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
+    {/* Content */}
+  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
           <div className="space-y-4">
             {/* Language selector and copy button */}
             <div className="flex items-center justify-between">
@@ -372,7 +386,7 @@ if (response.Activity != null)
                 {selectedLanguage === 'javascript' && <div>• JavaScript: @azure/search-documents@12.0.0-beta.9</div>}
                 {selectedLanguage === 'java' && <div>• Java: com.azure:azure-search-documents:11.8.0-beta.1</div>}
                 {selectedLanguage === 'dotnet' && <div>• .NET: Azure.Search.Documents -Version 12.0.0-beta.8</div>}
-                {selectedLanguage === 'curl' && <div>• REST API: 2025-08-01-preview</div>}
+                {selectedLanguage === 'curl' && <div>• REST API: 2025-11-01-preview</div>}
               </div>
             </div>
 

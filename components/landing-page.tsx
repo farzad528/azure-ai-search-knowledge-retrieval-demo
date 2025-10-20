@@ -96,7 +96,7 @@ export function LandingPage() {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0.3])
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-bg-canvas via-bg-card to-bg-canvas flex flex-col overflow-x-hidden">
+  <div ref={containerRef} className="flex-1 bg-gradient-to-br from-bg-canvas via-bg-card to-bg-canvas flex flex-col overflow-x-hidden">
       {/* Animated background gradient orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div

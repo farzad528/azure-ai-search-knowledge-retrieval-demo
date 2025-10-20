@@ -31,6 +31,20 @@ export function KBViewCodeModal({ isOpen, onClose, agentId, agentName, messages,
   const [copiedCode, setCopiedCode] = React.useState<string | null>(null)
   const [selectedLanguage, setSelectedLanguage] = React.useState('curl')
 
+  // Lock body scroll while modal open to prevent double scrollbars (background + modal)
+  React.useEffect(() => {
+    if (isOpen) {
+      const prevBody = document.body.style.overflow
+      const prevHtml = document.documentElement.style.overflow
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = prevBody
+        document.documentElement.style.overflow = prevHtml
+      }
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   const copyCode = async (code: string, language: string) => {
@@ -65,7 +79,7 @@ export function KBViewCodeModal({ isOpen, onClose, agentId, agentName, messages,
     return `# Retrieve from knowledge agent using REST API
 # This is the actual conversation from your playground session
 
-curl -X POST "${searchEndpoint}/agents/${agentId}/retrieve?api-version=2025-08-01-preview" \\
+curl -X POST "${searchEndpoint}/knowledgebases/${agentId}/retrieve?api-version=2025-11-01-preview" \\
   -H "Content-Type: application/json" \\
   -H "api-key: \${AZURE_SEARCH_API_KEY}" \\
   -d '{
@@ -406,7 +420,7 @@ ${messagesCode}
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2">
-      <div className="bg-bg-canvas border border-stroke-divider rounded-lg w-[95vw] max-w-[1400px] h-[92vh] overflow-hidden flex flex-col">
+      <div className="bg-bg-canvas border border-stroke-divider rounded-lg w-[95vw] max-w-[1400px] max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-stroke-divider flex-shrink-0">
           <div>
@@ -423,8 +437,8 @@ ${messagesCode}
           </Button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+    {/* Content */}
+  <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
           <div className="space-y-4">
             {/* Language selector and copy button */}
             <div className="flex items-center justify-between">
@@ -479,7 +493,7 @@ ${messagesCode}
                 {selectedLanguage === 'typescript' && <div><code className="bg-bg-canvas px-1">npm install @azure/search-documents@12.0.0-beta.9</code></div>}
                 {selectedLanguage === 'java' && <div><code className="bg-bg-canvas px-1">com.azure:azure-search-documents:11.8.0-beta.1</code></div>}
                 {selectedLanguage === 'dotnet' && <div><code className="bg-bg-canvas px-1">dotnet add package Azure.Search.Documents --version 12.0.0-beta.8</code></div>}
-                {selectedLanguage === 'curl' && <div>REST API: <code className="bg-bg-canvas px-1">2025-08-01-preview</code></div>}
+                {selectedLanguage === 'curl' && <div>REST API: <code className="bg-bg-canvas px-1">2025-11-01-preview</code></div>}
               </div>
             </div>
 
@@ -520,3 +534,5 @@ ${messagesCode}
     </div>
   )
 }
+
+
