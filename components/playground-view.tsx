@@ -813,13 +813,37 @@ export function PlaygroundView() {
       </AnimatePresence>
 
       {/* Runtime Settings Panel */}
-      <RuntimeSettingsPanel
-        isOpen={runtimeSettingsOpen}
-        onClose={() => setRuntimeSettingsOpen(false)}
-        settings={runtimeSettings}
-        onSettingsChange={(settings) => setRuntimeSettings(settings as any)}
-        knowledgeSources={selectedAgent?.sourcesWithKinds || []}
-      />
+      <AnimatePresence>
+        {runtimeSettingsOpen && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 320, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="border-l border-stroke-divider bg-bg-card overflow-hidden"
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-semibold">Runtime Settings</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setRuntimeSettingsOpen(false)}
+                >
+                  <Dismiss20Regular className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <RuntimeSettingsPanel
+                settings={runtimeSettings}
+                onSettingsChange={(settings) => setRuntimeSettings(settings as any)}
+                knowledgeSources={selectedAgent?.sourcesWithKinds || []}
+                hasWebSource={selectedAgent?.sourcesWithKinds?.some(s => s.kind === 'web') ?? false}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* View Code Modal */}
       <ViewCodeModal
