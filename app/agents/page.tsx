@@ -22,6 +22,7 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { useEditMode, withEditMode } from '@/lib/edit-mode'
 
 interface Agent {
   id: string
@@ -41,6 +42,7 @@ interface Thread {
 }
 
 export default function AgentsPage() {
+  const { isEditMode } = useEditMode()
   const router = useRouter()
   const [agents, setAgents] = useState<Agent[]>([])
   const [threads, setThreads] = useState<Thread[]>([])
@@ -191,11 +193,11 @@ export default function AgentsPage() {
       <PageHeader
         title="Agents"
         description="Manage your Foundry agents and chat threads"
-        primaryAction={{
+        primaryAction={isEditMode ? {
           label: "Create Agent",
-          onClick: () => router.push('/agent-builder'),
+          onClick: () => router.push(withEditMode('/agent-builder')),
           icon: Add20Regular
-        }}
+        } : undefined}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -252,18 +254,20 @@ export default function AgentsPage() {
                               </div>
                             </div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setDeleteAgentDialog({ open: true, agent })
-                            }}
-                            className="h-8 w-8 text-fg-muted hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
-                            title="Delete agent"
-                          >
-                            <Delete20Regular className="h-4 w-4" />
-                          </Button>
+                          {isEditMode && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteAgentDialog({ open: true, agent })
+                              }}
+                              className="h-8 w-8 text-fg-muted hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                              title="Delete agent"
+                            >
+                              <Delete20Regular className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </CardHeader>
 
@@ -364,15 +368,17 @@ export default function AgentsPage() {
                             </CardDescription>
                           )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteThreadDialog({ open: true, thread })}
-                          className="h-8 w-8 text-fg-muted hover:text-destructive hover:bg-destructive/10"
-                          title="Delete thread"
-                        >
-                          <Delete20Regular className="h-4 w-4" />
-                        </Button>
+                        {isEditMode && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteThreadDialog({ open: true, thread })}
+                            className="h-8 w-8 text-fg-muted hover:text-destructive hover:bg-destructive/10"
+                            title="Delete thread"
+                          >
+                            <Delete20Regular className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </CardHeader>
                   </Card>

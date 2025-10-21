@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { AgentAvatar } from '@/components/agent-avatar'
 import { StatusPill } from '@/components/shared/status-pill'
 import { formatRelativeTime } from '@/lib/utils'
+import { useEditMode, withEditMode } from '@/lib/edit-mode'
 
 export interface KnowledgeBaseSummary {
   id: string
@@ -29,6 +30,7 @@ const statusConfig: Record<string, { label: string; variant: 'success' | 'neutra
 }
 
 export function KnowledgeBaseCard({ knowledgeBase }: KnowledgeBaseCardProps) {
+  const { isEditMode } = useEditMode()
   const status = statusConfig[knowledgeBase.status || ''] || statusConfig.idle
 
   if (!knowledgeBase.name) {
@@ -60,15 +62,17 @@ export function KnowledgeBaseCard({ knowledgeBase }: KnowledgeBaseCardProps) {
 
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" asChild>
-              <Link href={`/knowledge-bases/${knowledgeBaseId}`}>
+              <Link href={withEditMode(`/knowledge-bases/${knowledgeBaseId}`)}>
                 <Settings20Regular className="h-4 w-4" />
-                <span className="sr-only">Configure knowledge base</span>
+                <span className="sr-only">{isEditMode ? 'Configure' : 'View'} knowledge base</span>
               </Link>
             </Button>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal20Regular className="h-4 w-4" />
-              <span className="sr-only">More options</span>
-            </Button>
+            {isEditMode && (
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal20Regular className="h-4 w-4" />
+                <span className="sr-only">More options</span>
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>

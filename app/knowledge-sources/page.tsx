@@ -10,6 +10,7 @@ import { KnowledgeSourceCard } from '@/components/knowledge-source-card'
 import { EmptyState } from '@/components/shared/empty-state'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
+import { useEditMode } from '@/lib/edit-mode'
 
 interface KnowledgeSource {
   id: string
@@ -21,6 +22,7 @@ interface KnowledgeSource {
 }
 
 export default function KnowledgeSourcesPage() {
+  const { isEditMode } = useEditMode()
   const [sources, setSources] = useState<KnowledgeSource[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -69,11 +71,11 @@ export default function KnowledgeSourcesPage() {
       <PageHeader
         title="Knowledge sources"
         description="Unified indexes and repositories optimized for high-quality agent grounding."
-        primaryAction={{
+        primaryAction={isEditMode ? {
           label: "Connect source",
           onClick: () => console.log('Connect source clicked'),
           icon: Add20Regular
-        }}
+        } : undefined}
       />
 
       {/* Search */}

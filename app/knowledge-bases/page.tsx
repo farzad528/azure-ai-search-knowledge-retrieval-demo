@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
 import { CreateKnowledgeBaseForm } from '@/components/forms/create-knowledge-base-form'
+import { useEditMode } from '@/lib/edit-mode'
 
 type KnowledgeSource = {
   id: string
@@ -19,6 +20,7 @@ type KnowledgeSource = {
 }
 
 export default function KnowledgeAgentsPage() {
+  const { isEditMode } = useEditMode()
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseSummary[]>([])
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([])
   const [loading, setLoading] = useState(true)
@@ -99,11 +101,11 @@ export default function KnowledgeAgentsPage() {
       <PageHeader
         title="Knowledge Bases"
         description="Manage and configure knowledge bases for grounded retrieval across your enterprise knowledge."
-        primaryAction={{
+        primaryAction={isEditMode ? {
           label: "Create knowledge base",
           onClick: () => setShowCreateKnowledgeBase(true),
           icon: Add20Regular
-        }}
+        } : undefined}
       />
 
       {/* Search */}

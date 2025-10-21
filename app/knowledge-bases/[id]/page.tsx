@@ -13,6 +13,7 @@ import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
 import { fetchKnowledgeBase, fetchKnowledgeSources, updateKnowledgeBase, deleteKnowledgeBase } from '../../../lib/api'
 import { formatRelativeTime } from '@/lib/utils'
+import { useEditMode } from '@/lib/edit-mode'
 
 type KnowledgeBaseData = {
   name: string
@@ -57,6 +58,7 @@ type KnowledgeSource = {
 }
 
 export default function KnowledgeBaseDetailPage() {
+  const { isEditMode } = useEditMode()
   const params = useParams()
   const router = useRouter()
   const knowledgeBaseId = params.id as string
@@ -154,7 +156,7 @@ export default function KnowledgeBaseDetailPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          {isEditMode && <TabsTrigger value="settings">Settings</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview">
@@ -226,19 +228,21 @@ export default function KnowledgeBaseDetailPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="settings">
-          <Card>
-            <CardContent className="p-0">
-              <EditKnowledgeBaseForm
-                knowledgeBase={knowledgeBase}
-                knowledgeSources={knowledgeSources}
-                onSubmit={handleUpdateKnowledgeBase}
-                onCancel={() => setActiveTab('overview')}
-                onDelete={handleDeleteKnowledgeBase}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {isEditMode && (
+          <TabsContent value="settings">
+            <Card>
+              <CardContent className="p-0">
+                <EditKnowledgeBaseForm
+                  knowledgeBase={knowledgeBase}
+                  knowledgeSources={knowledgeSources}
+                  onSubmit={handleUpdateKnowledgeBase}
+                  onCancel={() => setActiveTab('overview')}
+                  onDelete={handleDeleteKnowledgeBase}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )
