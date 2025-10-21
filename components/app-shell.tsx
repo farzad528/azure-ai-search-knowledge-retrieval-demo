@@ -119,7 +119,7 @@ export function AppShell({ children }: AppShellProps) {
         {/* Main content */}
         <main
           id="main-content"
-          className={cn('flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain pt-16 transition-[margin] duration-200 ease-out',
+          className={cn('flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto pt-16 transition-[margin] duration-200 ease-out hide-scrollbar',
             showSidebar && (collapsed ? 'md:ml-20' : 'md:ml-64')
           )}
         >

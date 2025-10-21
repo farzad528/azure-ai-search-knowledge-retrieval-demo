@@ -19,7 +19,6 @@ import {
   DocumentDatabase20Regular
 } from '@fluentui/react-icons'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { getSourceKindLabel } from '@/lib/sourceKinds'
 
@@ -206,7 +205,7 @@ function KnowledgePageContent() {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Knowledge"
         description="Manage knowledge bases for your agents"
@@ -224,29 +223,27 @@ function KnowledgePageContent() {
             const usedByAgents = getAgentsUsingKnowledgeBase(kb.name)
 
             return (
-              <motion.div
-                key={kb.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-              >
+              <div key={kb.id} className="transform-gpu">
                 <Card
-                  className="h-[440px] flex flex-col hover:shadow-lg transition-all duration-200 cursor-pointer hover:border-accent"
+                  className="h-[440px] flex flex-col transition-all duration-200 cursor-pointer group relative overflow-hidden border-2 hover:border-accent/50 hover:shadow-xl hover:-translate-y-1"
                   onClick={() => router.push(`/knowledge/${kb.id}/edit`)}
                 >
+                  {/* Subtle gradient overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  
                   {/* Compact Header */}
-                  <CardHeader className="pb-2 flex-shrink-0">
+                  <CardHeader className="pb-2 flex-shrink-0 relative z-10">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <div className="p-1.5 rounded-md bg-accent-subtle flex-shrink-0">
+                          <div className="p-1.5 rounded-lg bg-accent-subtle flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
                             <DocumentDatabase20Regular className="h-4 w-4 text-accent" />
                           </div>
-                          <CardTitle className="text-base truncate">{kb.name}</CardTitle>
+                          <CardTitle className="text-base truncate font-semibold">{kb.name}</CardTitle>
                         </div>
                         <div className="flex items-center gap-2">
                           <StatusPill variant="success">healthy</StatusPill>
-                          <span className="text-xs text-fg-muted">
+                          <span className="text-xs text-fg-muted font-medium">
                             {kb.model || 'gpt-4o-mini'}
                           </span>
                         </div>
@@ -258,7 +255,7 @@ function KnowledgePageContent() {
                           e.stopPropagation()
                           setDeleteDialog({ open: true, kb })
                         }}
-                        className="h-7 w-7 text-fg-muted hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                        className="h-7 w-7 text-fg-muted hover:text-destructive hover:bg-destructive/10 flex-shrink-0 hover:scale-110 transition-transform"
                       >
                         <Delete20Regular className="h-3.5 w-3.5" />
                       </Button>
@@ -271,28 +268,30 @@ function KnowledgePageContent() {
                   </CardHeader>
 
                   {/* Main Content - Two Column Layout */}
-                  <CardContent className="flex-1 flex flex-col min-h-0 space-y-3 px-4">
+                  <CardContent className="flex-1 flex flex-col min-h-0 space-y-3 px-4 relative z-10">
                     {/* Sources Section */}
                     <div className="flex-1 min-h-0">
-                      <div className="text-xs font-medium text-fg-default mb-2 flex items-center gap-1">
-                        <span className="w-2 h-2 bg-accent rounded-full"></span>
+                      <div className="text-xs font-semibold text-fg-default mb-2 flex items-center gap-1.5">
+                        <span className="w-2 h-2 bg-accent rounded-full animate-pulse"></span>
                         {kb.knowledgeSources.length} Source{kb.knowledgeSources.length !== 1 ? 's' : ''}
                       </div>
 
                       {kb.knowledgeSources.length > 0 && (
-                        <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
+                        <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar thin">
                           {kb.knowledgeSources.slice(0, 6).map((source, idx) => (
                             <div
                               key={idx}
-                              className="flex items-center gap-2 p-2 bg-bg-subtle rounded border border-stroke-divider"
+                              className="flex items-center gap-2 p-2 bg-bg-subtle rounded-lg border border-stroke-divider hover:border-accent/30 hover:bg-accent-subtle/30 transition-all duration-150 group/source"
                             >
-                              <Image
-                                src={getSourceIcon(source.kind)}
-                                alt={source.kind}
-                                width={14}
-                                height={14}
-                                className="object-contain flex-shrink-0"
-                              />
+                              <div className="flex-shrink-0 group-hover/source:scale-110 transition-transform duration-150">
+                                <Image
+                                  src={getSourceIcon(source.kind)}
+                                  alt={source.kind}
+                                  width={14}
+                                  height={14}
+                                  className="object-contain"
+                                />
+                              </div>
                               <div className="flex-1 min-w-0">
                                 <div className="text-xs font-medium text-fg-default truncate">
                                   {source.name}
@@ -304,7 +303,7 @@ function KnowledgePageContent() {
                             </div>
                           ))}
                           {kb.knowledgeSources.length > 6 && (
-                            <div className="text-xs text-fg-muted text-center py-1.5 bg-bg-subtle rounded border border-stroke-divider">
+                            <div className="text-xs text-fg-muted text-center py-1.5 bg-bg-subtle rounded-lg border border-stroke-divider">
                               +{kb.knowledgeSources.length - 6} more
                             </div>
                           )}
@@ -315,22 +314,22 @@ function KnowledgePageContent() {
                     {/* Agents Section - Always at bottom with fixed space */}
                     {usedByAgents.length > 0 && (
                       <div className="border-t border-stroke-divider pt-3 flex-shrink-0">
-                        <div className="text-xs font-medium text-fg-muted mb-2 flex items-center gap-1.5">
-                          <Bot20Regular className="h-3.5 w-3.5" />
+                        <div className="text-xs font-semibold text-fg-muted mb-2 flex items-center gap-1.5">
+                          <Bot20Regular className="h-3.5 w-3.5 text-accent" />
                           <span>Used by {usedByAgents.length} agent{usedByAgents.length !== 1 ? 's' : ''}</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {usedByAgents.slice(0, 3).map(agent => (
                             <span
                               key={agent.id}
-                              className="px-2.5 py-1 text-xs bg-bg-subtle text-fg-default rounded-md border border-stroke-divider truncate max-w-[120px] inline-block hover:bg-accent-subtle hover:text-accent hover:border-accent transition-colors"
+                              className="px-2.5 py-1 text-xs bg-bg-subtle text-fg-default rounded-lg border border-stroke-divider truncate max-w-[120px] inline-block hover:bg-accent-subtle hover:text-accent hover:border-accent hover:scale-105 transition-all duration-150"
                               title={agent.name}
                             >
                               {agent.name}
                             </span>
                           ))}
                           {usedByAgents.length > 3 && (
-                            <span className="px-2.5 py-1 text-xs bg-bg-subtle text-fg-muted rounded-md border border-stroke-divider">
+                            <span className="px-2.5 py-1 text-xs bg-bg-subtle text-fg-muted rounded-lg border border-stroke-divider">
                               +{usedByAgents.length - 3} more
                             </span>
                           )}
@@ -340,11 +339,11 @@ function KnowledgePageContent() {
                   </CardContent>
 
                   {/* Minimal Footer */}
-                  <CardFooter className="pt-2 pb-3 flex-shrink-0">
+                  <CardFooter className="pt-2 pb-3 flex-shrink-0 relative z-10">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-8 text-xs"
+                      className="w-full h-8 text-xs group-hover:bg-accent group-hover:text-fg-on-accent group-hover:border-accent transition-all duration-200"
                       onClick={(e) => {
                         e.stopPropagation()
                         if (isEditMode) {
@@ -359,7 +358,7 @@ function KnowledgePageContent() {
                     </Button>
                   </CardFooter>
                 </Card>
-              </motion.div>
+              </div>
             )
           })}
         </div>
