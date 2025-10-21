@@ -131,7 +131,7 @@ export default function EditKnowledgeBasePage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="flex flex-col flex-1 min-h-0 space-y-6">
         <PageHeader
           title="Edit Knowledge Base"
           description="Configure your knowledge base settings"
@@ -147,7 +147,7 @@ export default function EditKnowledgeBasePage() {
 
   if (error || !kb) {
     return (
-      <div className="space-y-6">
+      <div className="flex flex-col flex-1 min-h-0 space-y-6">
         <PageHeader
           title="Edit Knowledge Base"
           description="Configure your knowledge base settings"
@@ -169,7 +169,7 @@ export default function EditKnowledgeBasePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 space-y-6">
       <EditKnowledgeBaseForm
         knowledgeBase={kb}
         knowledgeSources={knowledgeSources}

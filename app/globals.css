@@ -100,6 +100,14 @@
     @apply scroll-smooth;
   }
 
+  /* Use the app-level main container for scrolling; prevent document scroll */
+  html,
+  body,
+  #__next {
+    height: 100%;
+    overflow: hidden !important;
+  }
+
   body {
     @apply bg-bg-canvas text-fg-default font-sans antialiased;
     min-height: 100vh;
@@ -209,5 +217,14 @@
   /* Narrow variant if needed */
   .custom-scrollbar.thin::-webkit-scrollbar {
     width: 6px;
+  }
+
+  /* Utility to visually hide scrollbars while preserving scroll behavior */
+  .hide-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
   }
 }

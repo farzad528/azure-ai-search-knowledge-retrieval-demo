@@ -75,7 +75,7 @@ export function AppShell({ children }: AppShellProps) {
   const showSidebar = pathname !== '/'
 
   return (
-    <div className="relative min-h-screen bg-bg-canvas text-fg-default">
+  <div className="relative h-screen overflow-y-hidden bg-bg-canvas text-fg-default">
       {/* Skip to content link */}
       <a
         href="#main-content"
@@ -87,7 +87,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* Header */}
       <Header onMenuClick={() => setSidebarOpen(true)} showSidebar={showSidebar} />
 
-      <div className="flex">
+  <div className="flex h-full">
         {showSidebar && (
           <>
             {/* Mobile sidebar overlay */}
@@ -119,15 +119,15 @@ export function AppShell({ children }: AppShellProps) {
         {/* Main content */}
         <main
           id="main-content"
-          className={cn('flex min-h-[calc(100vh-4rem)] min-w-0 flex-1 flex-col transition-[margin] duration-200 ease-out',
+          className={cn('flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain pt-16 transition-[margin] duration-200 ease-out',
             showSidebar && (collapsed ? 'md:ml-20' : 'md:ml-64')
           )}
         >
-          <div className={cn('flex-1', showSidebar && !pathname.includes('/playground') && !pathname.includes('/test') ? 'px-6 pb-10 pt-6 md:px-10' : '')}>
+          <div className={cn('flex-1 min-h-0', showSidebar && !pathname.includes('/playground') && !pathname.includes('/test') ? 'px-6 pb-16 pt-6 md:px-10' : '')}>
             {children}
           </div>
           {showSidebar && (
-            <footer className="flex items-center justify-center border-t border-glass-border bg-glass-surface px-6 py-4 text-xs text-fg-muted backdrop-blur-surface">
+            <footer className="sticky bottom-0 flex items-center justify-center border-t border-glass-border bg-glass-surface px-6 py-4 text-xs text-fg-muted backdrop-blur-surface">
               <span>
                 Made with <span role="img" aria-label="love">❤️</span> by Azure AI Search Product Group
               </span>
@@ -146,7 +146,7 @@ interface HeaderProps {
 
 function Header({ onMenuClick, showSidebar }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-30 border-b border-glass-border bg-glass-surface backdrop-blur-elevated shadow-sm">
+  <header className="fixed top-0 left-0 right-0 z-30 border-b border-glass-border bg-glass-surface backdrop-blur-elevated shadow-sm">
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-3">
           {showSidebar && (

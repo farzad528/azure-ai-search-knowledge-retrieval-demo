@@ -176,8 +176,18 @@ export function RuntimeSettingsPanel({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="answerSynthesis">Answer Synthesis</SelectItem>
-              <SelectItem value="extractiveData">Extractive Data</SelectItem>
+              <SelectItem value="answerSynthesis">
+                <div className="flex flex-col">
+                  <span>Answer Synthesis</span>
+                  <span className="text-xs text-fg-muted">Generate a natural language answer</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="extractiveData">
+                <div className="flex flex-col">
+                  <span>Extractive Data</span>
+                  <span className="text-xs text-fg-muted">Return relevant source chunks</span>
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
           {hasWebSource && (

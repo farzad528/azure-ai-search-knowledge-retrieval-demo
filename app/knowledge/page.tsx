@@ -1,8 +1,8 @@
-'use client'
+ 'use client'
 
 export const dynamic = 'force-dynamic'
 
-import React, { useState, useEffect } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/shared/page-header'
@@ -18,17 +18,17 @@ import {
   Bot20Regular,
   DocumentDatabase20Regular
 } from '@fluentui/react-icons'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { getSourceKindLabel } from '@/lib/sourceKinds'
 
-interface KnowledgeSource {
+type KnowledgeSource = {
   name: string
   kind: 'indexedOneLake' | 'searchIndex' | 'azureBlob' | 'remoteSharePoint' | 'indexedSharePoint' | 'web' | 'unknown'
 }
 
-interface KnowledgeBase {
+type KnowledgeBase = {
   id: string
   name: string
   description?: string
@@ -41,14 +41,16 @@ interface KnowledgeBase {
   '@odata.etag'?: string
 }
 
-interface FoundryAgent {
+type FoundryAgent = {
   id: string
   name: string
   tools?: any[]
 }
 
-export default function KnowledgePage() {
+function KnowledgePageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isEditMode = !!searchParams?.has('edit-mode')
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([])
   const [foundryAgents, setFoundryAgents] = useState<FoundryAgent[]>([])
   const [loading, setLoading] = useState(true)
@@ -204,7 +206,7 @@ export default function KnowledgePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 space-y-6">
       <PageHeader
         title="Knowledge"
         description="Manage knowledge bases for your agents"
@@ -345,11 +347,15 @@ export default function KnowledgePage() {
                       className="w-full h-8 text-xs"
                       onClick={(e) => {
                         e.stopPropagation()
-                        router.push(`/knowledge/${kb.id}/edit`)
+                        if (isEditMode) {
+                          router.push(`/knowledge/${kb.id}/edit`)
+                        } else {
+                          router.push(`/knowledge/${kb.id}`)
+                        }
                       }}
                     >
                       <Settings20Regular className="h-3.5 w-3.5 mr-1.5" />
-                      Configure
+                      {isEditMode ? 'Configure' : 'View Details'}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -371,5 +377,13 @@ export default function KnowledgePage() {
         onConfirm={() => deleteDialog.kb && handleDelete(deleteDialog.kb)}
       />
     </div>
+  )
+}
+
+export default function KnowledgePage() {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <KnowledgePageContent />
+    </Suspense>
   )
 }
