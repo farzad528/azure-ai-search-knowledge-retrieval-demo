@@ -11,6 +11,8 @@ import { VoiceInput } from '@/components/ui/voice-input'
 import { ImageInput } from '@/components/ui/image-input'
 import { InlineCitationsText } from '@/components/inline-citations'
 import { SourceKindIcon } from '@/components/source-kind-icon'
+import { MCPToolCallDisplay } from '@/components/mcp-tool-call-display'
+import { RuntimeSettingsPanel } from '@/components/runtime-settings-panel'
 import { fetchKnowledgeBases, retrieveFromKnowledgeBase } from '../lib/api'
 import { KBViewCodeModal } from '@/components/kb-view-code-modal'
 import { processImageFile } from '@/lib/imageProcessing'
@@ -63,6 +65,9 @@ type Reference = {
   rerankerScore?: number
   docKey?: string
   blobUrl?: string
+  toolName?: string
+  serverURL?: string
+  content?: string
 }
 
 type Activity = {
@@ -101,7 +106,22 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
     }
     return false
   })
-  const [runtimeSettings, setRuntimeSettings] = useState({
+  const [runtimeSettings, setRuntimeSettings] = useState<{
+    outputMode?: 'answerSynthesis' | 'extractiveData'
+    reasoningEffort?: 'low' | 'medium' | 'high'
+    knowledgeSourceParams: Array<{
+      knowledgeSourceName: string
+      kind: string
+      alwaysQuerySource?: boolean
+      includeReferences?: boolean
+      includeReferenceSourceData?: boolean
+      rerankerThreshold?: number | null
+      maxSubQueries?: number | null
+      headers?: Record<string, string>
+    }>
+  }>({
+    outputMode: 'answerSynthesis',
+    reasoningEffort: 'low',
     knowledgeSourceParams: []
   })
 
@@ -175,6 +195,11 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
       if (foundAgent && foundAgent.id !== selectedAgent?.id) {
         setSelectedAgent(foundAgent)
         setMessages([]) // Clear messages when switching agents
+        setRuntimeSettings({ // Reset runtime settings when switching agents
+          outputMode: 'answerSynthesis',
+          reasoningEffort: 'low',
+          knowledgeSourceParams: []
+        })
       }
     }
   }, [preselectedAgent, agents])
@@ -299,7 +324,51 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
         }
       ]
 
-  const response = await retrieveFromKnowledgeBase(selectedAgent.id, azureMessages, runtimeSettings)
+      // Transform runtime settings to match API expectations
+      const apiParams: any = {}
+      
+      if (runtimeSettings.outputMode) {
+        apiParams.outputMode = runtimeSettings.outputMode
+      }
+      
+      if (runtimeSettings.reasoningEffort) {
+        apiParams.retrievalReasoningEffort = runtimeSettings.reasoningEffort
+      }
+      
+      if (runtimeSettings.knowledgeSourceParams && runtimeSettings.knowledgeSourceParams.length > 0) {
+        // Clean up knowledge source params: remove false boolean values
+        // Azure API requires: if a boolean is false, omit it; if true, include it
+        apiParams.knowledgeSourceParams = runtimeSettings.knowledgeSourceParams.map(param => {
+          const cleanedParam: any = {
+            knowledgeSourceName: param.knowledgeSourceName,
+            kind: param.kind
+          }
+          
+          // Only include boolean fields if they are true
+          if (param.alwaysQuerySource === true) cleanedParam.alwaysQuerySource = true
+          if (param.includeReferences === true) cleanedParam.includeReferences = true
+          if (param.includeReferenceSourceData === true) cleanedParam.includeReferenceSourceData = true
+          
+          // Include numeric fields if they exist
+          if (param.rerankerThreshold !== undefined) cleanedParam.rerankerThreshold = param.rerankerThreshold
+          if (param.maxSubQueries !== undefined) cleanedParam.maxSubQueries = param.maxSubQueries
+          
+          // Include headers if they exist and are not empty
+          if (param.headers && Object.keys(param.headers).length > 0) {
+            cleanedParam.headers = param.headers
+          }
+          
+          return cleanedParam
+        })
+      }
+
+      // Debug logging - SEND PROMPT
+      console.log('🔍 API Request Payload (sendPrompt):')
+      console.log('Knowledge Base:', selectedAgent.id)
+      console.log('Messages:', JSON.stringify(azureMessages, null, 2))
+      console.log('API Params:', JSON.stringify(apiParams, null, 2))
+
+      const response = await retrieveFromKnowledgeBase(selectedAgent.id, azureMessages, apiParams)
 
       let assistantText = 'I apologize, but I was unable to generate a response.'
       if (response.response && response.response.length > 0) {
@@ -318,6 +387,12 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
 
       setMessages(prev => [...prev, assistantMessage])
     } catch (err) {
+      // Enhanced error logging - SEND PROMPT
+      console.error('❌ API Error (sendPrompt):', err)
+      if (err && typeof err === 'object') {
+        console.error('Error details:', JSON.stringify(err, null, 2))
+      }
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -390,7 +465,51 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
         }
       ]
 
-  const response = await retrieveFromKnowledgeBase(selectedAgent.id, azureMessages, runtimeSettings)
+      // Transform runtime settings to match API expectations
+      const apiParams: any = {}
+      
+      if (runtimeSettings.outputMode) {
+        apiParams.outputMode = runtimeSettings.outputMode
+      }
+      
+      if (runtimeSettings.reasoningEffort) {
+        apiParams.retrievalReasoningEffort = runtimeSettings.reasoningEffort
+      }
+      
+      if (runtimeSettings.knowledgeSourceParams && runtimeSettings.knowledgeSourceParams.length > 0) {
+        // Clean up knowledge source params: remove false boolean values
+        // Azure API requires: if a boolean is false, omit it; if true, include it
+        apiParams.knowledgeSourceParams = runtimeSettings.knowledgeSourceParams.map(param => {
+          const cleanedParam: any = {
+            knowledgeSourceName: param.knowledgeSourceName,
+            kind: param.kind
+          }
+          
+          // Only include boolean fields if they are true
+          if (param.alwaysQuerySource === true) cleanedParam.alwaysQuerySource = true
+          if (param.includeReferences === true) cleanedParam.includeReferences = true
+          if (param.includeReferenceSourceData === true) cleanedParam.includeReferenceSourceData = true
+          
+          // Include numeric fields if they exist
+          if (param.rerankerThreshold !== undefined) cleanedParam.rerankerThreshold = param.rerankerThreshold
+          if (param.maxSubQueries !== undefined) cleanedParam.maxSubQueries = param.maxSubQueries
+          
+          // Include headers if they exist and are not empty
+          if (param.headers && Object.keys(param.headers).length > 0) {
+            cleanedParam.headers = param.headers
+          }
+          
+          return cleanedParam
+        })
+      }
+
+      // Debug logging - HANDLE SUBMIT
+      console.log('🔍 API Request Payload (handleSubmit):')
+      console.log('Knowledge Base:', selectedAgent.id)
+      console.log('Messages:', JSON.stringify(azureMessages, null, 2))
+      console.log('API Params:', JSON.stringify(apiParams, null, 2))
+
+      const response = await retrieveFromKnowledgeBase(selectedAgent.id, azureMessages, apiParams)
 
       let assistantText = 'I apologize, but I was unable to generate a response.'
       if (response.response && response.response.length > 0) {
@@ -409,6 +528,12 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
 
       setMessages(prev => [...prev, assistantMessage])
     } catch (err) {
+      // Enhanced error logging - HANDLE SUBMIT
+      console.error('❌ API Error (handleSubmit):', err)
+      if (err && typeof err === 'object') {
+        console.error('Error details:', JSON.stringify(err, null, 2))
+      }
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -683,7 +808,7 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
             <div className="h-full overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-semibold">Knowledge Base Settings</h3>
+                  <h3 className="font-semibold">Runtime Settings</h3>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -693,123 +818,45 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
                   </Button>
                 </div>
 
-                <div className="space-y-6">
-                  {/* Agent Info */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">Agent Name</h4>
-                    <div className="p-3 bg-bg-subtle rounded-md">
-                      <span className="text-sm">{selectedAgent.name}</span>
-                    </div>
-                  </div>
+                {/* Runtime Settings Panel */}
+                <RuntimeSettingsPanel
+                  knowledgeSources={selectedAgent.knowledgeSources || []}
+                  settings={runtimeSettings}
+                  onSettingsChange={setRuntimeSettings}
+                  hasWebSource={selectedAgent.knowledgeSources?.some(ks => ks.name?.toLowerCase().includes('web')) || false}
+                />
 
-                  {/* Model */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">Model</h4>
-                    <div className="p-3 bg-bg-subtle rounded-md">
-                      <span className="text-sm">{selectedAgent.model || 'Default model'}</span>
-                    </div>
-                  </div>
-
-                  {/* Output Mode */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">Output Mode</h4>
-                    <div className="p-3 bg-bg-subtle rounded-md">
-                      <span className="text-sm">
-                        {selectedAgent.outputConfiguration?.modality === 'answerSynthesis' && 'Answer Synthesis'}
-                        {selectedAgent.outputConfiguration?.modality === 'extractiveData' && 'Extractive Data'}
-                        {!selectedAgent.outputConfiguration?.modality && 'Default'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Answer Instructions */}
-                  {selectedAgent.outputConfiguration?.answerInstructions && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-3">Answer Instructions</h4>
-                      <div className="p-3 bg-bg-subtle rounded-md">
-                        <p className="text-xs text-fg-muted whitespace-pre-wrap">
-                          {selectedAgent.outputConfiguration.answerInstructions}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Retrieval Instructions */}
-                  {selectedAgent.retrievalInstructions && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-3">Retrieval Instructions</h4>
-                      <div className="p-3 bg-bg-subtle rounded-md">
-                        <p className="text-xs text-fg-muted whitespace-pre-wrap">
-                          {selectedAgent.retrievalInstructions}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Knowledge Sources */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">Knowledge Sources</h4>
-                    <div className="space-y-2">
-                      {selectedAgent.knowledgeSources?.map((source, index) => (
-                        <div key={index} className="p-3 bg-bg-subtle rounded-md space-y-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-status-success rounded-full" />
-                            <span className="text-sm font-medium">{source.name}</span>
-                          </div>
-                          <div className="text-xs text-fg-muted space-y-1 pl-4">
-                            {source.includeReferences && (
-                              <div>• Include references</div>
-                            )}
-                            {source.includeReferenceSourceData && (
-                              <div>• Include source data</div>
-                            )}
-                            {source.alwaysQuerySource && (
-                              <div>• Always query source</div>
-                            )}
-                            {source.maxSubQueries && (
-                              <div>• Max sub-queries: {source.maxSubQueries}</div>
-                            )}
-                            {source.rerankerThreshold && (
-                              <div>• Reranker threshold: {source.rerankerThreshold}</div>
-                            )}
-                          </div>
+                {/* Display Settings */}
+                <div className="pt-6 mt-6 border-t border-stroke-divider">
+                  <h4 className="text-sm font-medium mb-3">Display Options</h4>
+                  <div className="space-y-3">
+                    <label className="flex items-center justify-between cursor-pointer group">
+                      <div className="flex-1">
+                        <div className="text-sm text-fg-default group-hover:text-accent transition-colors">
+                          Show cost estimates
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Display Settings */}
-                  <div className="pt-6 border-t border-stroke-divider">
-                    <h4 className="text-sm font-medium mb-3">Display Options</h4>
-                    <div className="space-y-3">
-                      <label className="flex items-center justify-between cursor-pointer group">
-                        <div className="flex-1">
-                          <div className="text-sm text-fg-default group-hover:text-accent transition-colors">
-                            Show cost estimates
-                          </div>
-                          <div className="text-xs text-fg-muted">
-                            Display estimated Azure AI Search costs per query
-                          </div>
+                        <div className="text-xs text-fg-muted">
+                          Display estimated Azure AI Search costs per query
                         </div>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={showCostEstimates}
-                          onClick={toggleCostEstimates}
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={showCostEstimates}
+                        onClick={toggleCostEstimates}
+                        className={cn(
+                          "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
+                          showCostEstimates ? "bg-accent" : "bg-bg-subtle border border-stroke-divider"
+                        )}
+                      >
+                        <span
                           className={cn(
-                            "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
-                            showCostEstimates ? "bg-accent" : "bg-bg-subtle border border-stroke-divider"
+                            "inline-block h-4 w-4 transform rounded-full bg-bg-canvas shadow transition-transform",
+                            showCostEstimates ? "translate-x-6" : "translate-x-1"
                           )}
-                        >
-                          <span
-                            className={cn(
-                              "inline-block h-4 w-4 transform rounded-full bg-bg-canvas shadow transition-transform",
-                              showCostEstimates ? "translate-x-6" : "translate-x-1"
-                            )}
-                          />
-                        </button>
-                      </label>
-                    </div>
+                        />
+                      </button>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -838,6 +885,18 @@ function MessageBubble({ message, agent, showCostEstimates }: { message: Message
 
   const shouldShowSnippets = agent?.knowledgeSources?.some(ks => ks.includeReferenceSourceData === true)
   const isUser = message.role === 'user'
+
+  // Extract MCP tool calls from references
+  const mcpToolCalls = message.references?.filter(ref => ref.type === 'mcpTool').map(ref => ({
+    toolName: ref.toolName || '',
+    serverURL: ref.serverURL || '',
+    ref_id: parseInt(ref.id) || 0,
+    title: ref.sourceData?.title || '',
+    content: ref.sourceData?.content || ''
+  })) || []
+
+  // Filter out MCP tools from regular references
+  const regularReferences = message.references?.filter(ref => ref.type !== 'mcpTool') || []
 
   return (
     <div className={cn('flex items-start gap-4', isUser && 'flex-row-reverse')}>
@@ -895,10 +954,11 @@ function MessageBubble({ message, agent, showCostEstimates }: { message: Message
                 className="flex items-center gap-2 text-sm font-medium text-fg-muted hover:text-fg-default"
               >
                 <span>
-                  {message.references && message.references.length > 0
-                    ? `${message.references.length} reference${message.references.length > 1 ? 's' : ''}`
+                  {regularReferences.length > 0
+                    ? `${regularReferences.length} reference${regularReferences.length > 1 ? 's' : ''}`
                     : `${message.activity?.length || 0} search${(message.activity?.length || 0) > 1 ? 'es' : ''}`
                   }
+                  {mcpToolCalls.length > 0 && ` • ${mcpToolCalls.length} tool call${mcpToolCalls.length > 1 ? 's' : ''}`}
                 </span>
                 {expanded ? (
                   <ChevronUp20Regular className="h-3 w-3" />
@@ -916,11 +976,16 @@ function MessageBubble({ message, agent, showCostEstimates }: { message: Message
                     transition={{ duration: 0.2 }}
                     className="mt-3 space-y-3 overflow-hidden w-full"
                   >
+                    {/* MCP Tool Calls */}
+                    {mcpToolCalls.length > 0 && (
+                      <MCPToolCallDisplay toolCalls={mcpToolCalls} />
+                    )}
+
                     {/* References */}
-                    {message.references && message.references.length > 0 && (
+                    {regularReferences.length > 0 && (
                       <div className="space-y-2 w-full">
                         <h6 className="text-xs font-medium text-fg-muted uppercase tracking-wide">References</h6>
-                        {Array.from(new Map(message.references.map((r, idx) => [r.blobUrl || r.id, { r, idx }])).values()).map(({ r: ref, idx }) => {
+                        {Array.from(new Map(regularReferences.map((r, idx) => [r.blobUrl || r.id, { r, idx }])).values()).map(({ r: ref, idx }) => {
                           const fileName = ref.blobUrl ? decodeURIComponent(ref.blobUrl.split('/').pop() || ref.id) : (ref.docKey || ref.id)
                           const activity = message.activity?.find(a => a.id === ref.activitySource)
                           const label = activity?.knowledgeSourceName || fileName

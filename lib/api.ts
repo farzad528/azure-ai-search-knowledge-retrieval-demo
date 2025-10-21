@@ -162,8 +162,30 @@ export async function retrieveFromKnowledgeBase(
   })
 
   if (!response.ok) {
-    const errorData = await response.json()
-  throw new Error(errorData.error || 'Failed to retrieve from knowledge base')
+    let errorMessage = `Failed to retrieve from knowledge base (${response.status})`
+    try {
+      const errorData = await response.json()
+      console.error('❌ API Error Response:', errorData)
+      
+      // Extract detailed error information
+      if (errorData.azureError) {
+        console.error('❌ Azure Error Details:', errorData.azureError)
+      }
+      if (errorData.details) {
+        console.error('❌ Error Details:', errorData.details)
+      }
+      
+      errorMessage = errorData.error?.message || errorData.error || errorData.message || errorMessage
+    } catch (parseError) {
+      console.error('❌ Failed to parse error response:', parseError)
+      try {
+        const textError = await response.text()
+        console.error('❌ Error response text:', textError)
+      } catch {
+        // Ignore
+      }
+    }
+    throw new Error(errorMessage)
   }
 
   return response.json()

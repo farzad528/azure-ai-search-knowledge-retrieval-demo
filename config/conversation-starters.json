@@ -94,6 +94,32 @@
           "tags": ["multi-source", "image-upload", "directives"]
         }
       ]
+    },
+    {
+      "agentIds": ["ontology-kb"],
+      "starters": [
+        {
+          "id": "list-turbines",
+          "label": "List All Turbines",
+          "prompt": "Show me a list of turbines",
+          "complexity": "Simple",
+          "tags": ["turbines", "list"]
+        },
+        {
+          "id": "wyoming-turbines",
+          "label": "Wyoming Turbines",
+          "prompt": "Turbines located in Wyoming",
+          "complexity": "Simple",
+          "tags": ["turbines", "location"]
+        },
+        {
+          "id": "ge-high-capacity",
+          "label": "High Capacity GE Turbines",
+          "prompt": "Highest capacity turbines with GE as a manufacturer",
+          "complexity": "Moderate",
+          "tags": ["turbines", "capacity", "manufacturer"]
+        }
+      ]
     }
   ]
 }
