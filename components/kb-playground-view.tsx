@@ -393,10 +393,18 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
         console.error('Error details:', JSON.stringify(err, null, 2))
       }
       
+      // Extract meaningful error message
+      let errorText = 'Error processing request. Please try again.'
+      if (err instanceof Error) {
+        errorText = `❌ Error: ${err.message}`
+      } else if (typeof err === 'string') {
+        errorText = `❌ Error: ${err}`
+      }
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: [{ type: 'text', text: 'Error processing request. Please try again.' }],
+        content: [{ type: 'text', text: errorText }],
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
@@ -534,10 +542,18 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
         console.error('Error details:', JSON.stringify(err, null, 2))
       }
       
+      // Extract meaningful error message
+      let errorText = 'Error processing request. Please try again.'
+      if (err instanceof Error) {
+        errorText = `❌ Error: ${err.message}`
+      } else if (typeof err === 'string') {
+        errorText = `❌ Error: ${err}`
+      }
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: [{ type: 'text', text: 'Error processing request. Please try again.' }],
+        content: [{ type: 'text', text: errorText }],
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])

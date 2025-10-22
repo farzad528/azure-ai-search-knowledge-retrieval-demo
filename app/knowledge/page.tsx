@@ -5,18 +5,22 @@ export const dynamic = 'force-dynamic'
 import React, { Suspense, useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { ErrorState } from '@/components/shared/error-state'
 import { StatusPill } from '@/components/shared/status-pill'
-import { ConfirmationDialog } from '@/components/shared/confirmation-dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
+import { FormLabel } from '@/components/ui/form'
 import {
   Database20Regular,
   Settings20Regular,
   Delete20Regular,
   Bot20Regular,
-  DocumentDatabase20Regular
+  DocumentDatabase20Regular,
+  Warning20Regular
 } from '@fluentui/react-icons'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
@@ -49,17 +53,38 @@ type FoundryAgent = {
 function KnowledgePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { toast } = useToast()
   const isEditMode = !!searchParams?.has('edit-mode')
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([])
   const [foundryAgents, setFoundryAgents] = useState<FoundryAgent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; kb: KnowledgeBase | null }>({ open: false, kb: null })
+  const [deleteConfirmName, setDeleteConfirmName] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     fetchData()
   }, [])
+
+  const searchParamsString = searchParams?.toString()
+
+  useEffect(() => {
+    if (!searchParamsString) return
+
+    const params = new URLSearchParams(searchParamsString)
+    const status = params.get('status')
+    if (status === 'saved') {
+      toast({
+        type: 'success',
+        title: 'Changes saved',
+        description: 'Knowledge base has been updated successfully.'
+      })
+
+      const keepEditMode = params.has('edit-mode')
+      router.replace(`/knowledge${keepEditMode ? '?edit-mode' : ''}`)
+    }
+  }, [router, searchParamsString, toast])
 
   const fetchData = async () => {
     try {
@@ -125,6 +150,8 @@ function KnowledgePageContent() {
   }
 
   const handleDelete = async (kb: KnowledgeBase) => {
+    if (deleteConfirmName !== kb.name) return
+
     try {
       setDeleteLoading(true)
       const response = await fetch(`/api/knowledge-bases/${kb.id}`, {
@@ -136,12 +163,22 @@ function KnowledgePageContent() {
       }
 
       setKnowledgeBases(prev => prev.filter(k => k.id !== kb.id))
+      toast({
+        type: 'success',
+        title: 'Knowledge base deleted',
+        description: `"${kb.name}" has been permanently removed.`,
+      })
     } catch (err: any) {
       console.error('Error deleting knowledge base:', err)
-      setError(err.message || 'Failed to delete knowledge base')
+      toast({
+        type: 'error',
+        title: 'Delete failed',
+        description: err.message || 'Failed to delete knowledge base',
+      })
     } finally {
       setDeleteLoading(false)
       setDeleteDialog({ open: false, kb: null })
+      setDeleteConfirmName('')
     }
   }
 
@@ -226,7 +263,7 @@ function KnowledgePageContent() {
               <div key={kb.id} className="transform-gpu">
                 <Card
                   className="h-[440px] flex flex-col transition-all duration-200 cursor-pointer group relative overflow-hidden border-2 hover:border-accent/50 hover:shadow-xl hover:-translate-y-1"
-                  onClick={() => router.push(`/knowledge/${kb.id}/edit`)}
+                  onClick={() => router.push(`/knowledge/${kb.id}/edit${isEditMode ? '?edit-mode' : ''}`)}
                 >
                   {/* Subtle gradient overlay on hover */}
                   <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -248,17 +285,19 @@ function KnowledgePageContent() {
                           </span>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDeleteDialog({ open: true, kb })
-                        }}
-                        className="h-7 w-7 text-fg-muted hover:text-destructive hover:bg-destructive/10 flex-shrink-0 hover:scale-110 transition-transform"
-                      >
-                        <Delete20Regular className="h-3.5 w-3.5" />
-                      </Button>
+                      {isEditMode && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeleteDialog({ open: true, kb })
+                          }}
+                          className="h-7 w-7 text-fg-muted hover:text-destructive hover:bg-destructive/10 flex-shrink-0 hover:scale-110 transition-transform"
+                        >
+                          <Delete20Regular className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                     {kb.description && (
                       <CardDescription className="text-xs line-clamp-2 mt-1 text-fg-muted">
@@ -267,46 +306,35 @@ function KnowledgePageContent() {
                     )}
                   </CardHeader>
 
-                  {/* Main Content - Two Column Layout */}
-                  <CardContent className="flex-1 flex flex-col min-h-0 space-y-3 px-4 relative z-10">
+                  {/* Main Content - Chip-style Sources */}
+                  <CardContent className="flex-1 flex flex-col min-h-0 space-y-3 px-4 pb-3 relative z-10">
                     {/* Sources Section */}
-                    <div className="flex-1 min-h-0">
-                      <div className="text-xs font-semibold text-fg-default mb-2 flex items-center gap-1.5">
+                    <div className="flex-1 min-h-0 flex flex-col">
+                      <div className="text-xs font-semibold text-fg-default mb-2 flex items-center gap-1.5 flex-shrink-0">
                         <span className="w-2 h-2 bg-accent rounded-full animate-pulse"></span>
                         {kb.knowledgeSources.length} Source{kb.knowledgeSources.length !== 1 ? 's' : ''}
                       </div>
 
                       {kb.knowledgeSources.length > 0 && (
-                        <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar thin">
-                          {kb.knowledgeSources.slice(0, 6).map((source, idx) => (
+                        <div className="flex flex-wrap gap-1.5 content-start overflow-y-auto pr-1 custom-scrollbar thin max-h-[140px]">
+                          {kb.knowledgeSources.map((source, idx) => (
                             <div
                               key={idx}
-                              className="flex items-center gap-2 p-2 bg-bg-subtle rounded-lg border border-stroke-divider hover:border-accent/30 hover:bg-accent-subtle/30 transition-all duration-150 group/source"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-bg-subtle rounded-full border border-stroke-divider"
+                              title={source.name}
                             >
-                              <div className="flex-shrink-0 group-hover/source:scale-110 transition-transform duration-150">
-                                <Image
-                                  src={getSourceIcon(source.kind)}
-                                  alt={source.kind}
-                                  width={14}
-                                  height={14}
-                                  className="object-contain"
-                                />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs font-medium text-fg-default truncate">
-                                  {source.name}
-                                </div>
-                                <div className="text-xs text-fg-muted">
-                                  {getSourceKindLabel(source.kind)}
-                                </div>
-                              </div>
+                              <Image
+                                src={getSourceIcon(source.kind)}
+                                alt={source.kind}
+                                width={12}
+                                height={12}
+                                className="object-contain flex-shrink-0"
+                              />
+                              <span className="text-xs font-medium text-fg-default truncate max-w-[140px]">
+                                {source.name}
+                              </span>
                             </div>
                           ))}
-                          {kb.knowledgeSources.length > 6 && (
-                            <div className="text-xs text-fg-muted text-center py-1.5 bg-bg-subtle rounded-lg border border-stroke-divider">
-                              +{kb.knowledgeSources.length - 6} more
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
@@ -322,15 +350,15 @@ function KnowledgePageContent() {
                           {usedByAgents.slice(0, 3).map(agent => (
                             <span
                               key={agent.id}
-                              className="px-2.5 py-1 text-xs bg-bg-subtle text-fg-default rounded-lg border border-stroke-divider truncate max-w-[120px] inline-block hover:bg-accent-subtle hover:text-accent hover:border-accent hover:scale-105 transition-all duration-150"
+                              className="px-2.5 py-1 text-xs bg-bg-subtle text-fg-default rounded-full border border-stroke-divider truncate max-w-[140px] inline-block hover:bg-accent-subtle hover:text-accent hover:border-accent hover:scale-105 transition-all duration-150"
                               title={agent.name}
                             >
                               {agent.name}
                             </span>
                           ))}
                           {usedByAgents.length > 3 && (
-                            <span className="px-2.5 py-1 text-xs bg-bg-subtle text-fg-muted rounded-lg border border-stroke-divider">
-                              +{usedByAgents.length - 3} more
+                            <span className="px-2.5 py-1 text-xs bg-bg-subtle text-fg-muted rounded-full border border-stroke-divider">
+                              +{usedByAgents.length - 3}
                             </span>
                           )}
                         </div>
@@ -347,9 +375,9 @@ function KnowledgePageContent() {
                       onClick={(e) => {
                         e.stopPropagation()
                         if (isEditMode) {
-                          router.push(`/knowledge/${kb.id}/edit`)
+                          router.push(`/knowledge/${kb.id}/edit?edit-mode`)
                         } else {
-                          router.push(`/knowledge/${kb.id}`)
+                          router.push(`/knowledge/${kb.id}/edit`)
                         }
                       }}
                     >
@@ -365,16 +393,60 @@ function KnowledgePageContent() {
       )}
 
       {/* Delete Confirmation Dialog */}
-      <ConfirmationDialog
-        open={deleteDialog.open}
-        onOpenChange={(open) => setDeleteDialog({ open, kb: null })}
-        title="Delete Knowledge Base"
-        description={`Are you sure you want to delete "${deleteDialog.kb?.name}"? This action cannot be undone.`}
-        confirmText="Delete Knowledge Base"
-        variant="destructive"
-        loading={deleteLoading}
-        onConfirm={() => deleteDialog.kb && handleDelete(deleteDialog.kb)}
-      />
+      <Dialog 
+        open={deleteDialog.open} 
+        onOpenChange={(open) => {
+          setDeleteDialog({ open, kb: null })
+          if (!open) setDeleteConfirmName('')
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-destructive/10">
+                <Warning20Regular className="h-5 w-5 text-destructive" />
+              </div>
+              <DialogTitle>Delete Knowledge Base</DialogTitle>
+            </div>
+            <DialogDescription className="mt-3">
+              This action cannot be undone. This will permanently delete the knowledge base and remove all associated configurations.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteDialog.kb && (
+            <div className="pt-6 pb-4 space-y-3">
+              <FormLabel className="block text-sm font-medium">
+                Type <span className="font-mono font-semibold text-fg-default">{deleteDialog.kb.name}</span> to confirm:
+              </FormLabel>
+              <Input
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder={deleteDialog.kb.name}
+                className="w-full"
+                autoComplete="off"
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialog({ open: false, kb: null })
+                setDeleteConfirmName('')
+              }}
+              disabled={deleteLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteDialog.kb && handleDelete(deleteDialog.kb)}
+              disabled={!deleteDialog.kb || deleteConfirmName !== deleteDialog.kb.name || deleteLoading}
+            >
+              {deleteLoading ? 'Deleting...' : 'Delete Knowledge Base'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { PageHeader } from '@/components/shared/page-header'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
@@ -47,6 +47,8 @@ interface KnowledgeBase {
 export default function EditKnowledgeBasePage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isEditMode = searchParams?.has('edit-mode') ?? false
   const [kb, setKb] = useState<KnowledgeBase | null>(null)
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([])
   const [loading, setLoading] = useState(true)
@@ -111,9 +113,8 @@ export default function EditKnowledgeBasePage() {
       throw new Error(errorData.error || 'Failed to update knowledge base')
     }
 
-    // Refresh the data
-    router.refresh()
-    router.push('/knowledge')
+    const toastQuery = isEditMode ? '?edit-mode&status=saved' : '?status=saved'
+    router.push(`/knowledge${toastQuery}`)
   }
 
   const handleDelete = async () => {
@@ -133,8 +134,8 @@ export default function EditKnowledgeBasePage() {
     return (
       <div className="flex flex-col flex-1 min-h-0 space-y-6">
         <PageHeader
-          title="Edit Knowledge Base"
-          description="Configure your knowledge base settings"
+          title={isEditMode ? "Edit Knowledge Base" : "View Knowledge Base"}
+          description={isEditMode ? "Configure your knowledge base settings" : "View your knowledge base configuration"}
           backButton={{
             label: "Back to Knowledge",
             href: '/knowledge'
@@ -149,8 +150,8 @@ export default function EditKnowledgeBasePage() {
     return (
       <div className="flex flex-col flex-1 min-h-0 space-y-6">
         <PageHeader
-          title="Edit Knowledge Base"
-          description="Configure your knowledge base settings"
+          title={isEditMode ? "Edit Knowledge Base" : "View Knowledge Base"}
+          description={isEditMode ? "Configure your knowledge base settings" : "View your knowledge base configuration"}
           backButton={{
             label: "Back to Knowledge",
             href: '/knowledge'
@@ -175,7 +176,8 @@ export default function EditKnowledgeBasePage() {
         knowledgeSources={knowledgeSources}
         onSubmit={handleSubmit}
         onCancel={() => router.push('/knowledge')}
-        onDelete={handleDelete}
+        onDelete={isEditMode ? handleDelete : undefined}
+        isEditMode={isEditMode}
       />
     </div>
   )

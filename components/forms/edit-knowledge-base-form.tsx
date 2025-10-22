@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip } from '@/components/ui/tooltip'
-import { Info20Regular, ChevronDown20Regular, ChevronUp20Regular } from '@fluentui/react-icons'
+import { Info20Regular, ChevronDown20Regular, ChevronUp20Regular, Warning20Regular } from '@fluentui/react-icons'
 import { FormField, FormLabel, FormControl, FormDescription, FormMessage } from '@/components/ui/form'
 import { FormFrame } from '@/components/shared/form-frame'
 import { useToast } from '@/components/ui/toast'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { createKnowledgeBaseSchema, CreateKnowledgeBaseFormData } from '@/lib/validations'
 import { getSourceKindLabel } from '@/lib/sourceKinds'
 
@@ -58,6 +59,7 @@ interface EditKnowledgeBaseFormProps {
   onSubmit: (payload: Partial<KnowledgeBaseData>) => Promise<void>
   onCancel: () => void
   onDelete?: () => Promise<void>
+  isEditMode?: boolean
   className?: string
 }
 
@@ -67,13 +69,18 @@ export function EditKnowledgeBaseForm({
   onSubmit,
   onCancel,
   onDelete,
+  isEditMode = true,
   className,
 }: EditKnowledgeBaseFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isDeleting, setIsDeleting] = React.useState(false)
-  const [selectedSources, setSelectedSources] = React.useState<string[]>(
-    knowledgeBase.knowledgeSources?.map((ks) => ks.name) || []
+  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false)
+  const [deleteConfirmName, setDeleteConfirmName] = React.useState('')
+  const initialSources = React.useMemo(() => 
+    knowledgeBase.knowledgeSources?.map((ks) => ks.name) || [], 
+    [knowledgeBase.knowledgeSources]
   )
+  const [selectedSources, setSelectedSources] = React.useState<string[]>(initialSources)
   const { toast } = useToast()
 
   // Handle both outputMode (API response) and outputConfiguration.modality (form)
@@ -98,18 +105,26 @@ export function EditKnowledgeBaseForm({
   const watchedModel = watch('modelDeployment')
   const watchedOutputModality = watch('outputModality')
 
+  // Track changes
+  React.useEffect(() => {
+    setSelectedSources(initialSources)
+    setValue('sources', initialSources, { shouldDirty: false })
+  }, [initialSources, setValue])
+
   const toggleSource = (sourceName: string) => {
     setSelectedSources((prev) => {
       const updated = prev.includes(sourceName)
         ? prev.filter((name) => name !== sourceName)
         : [...prev, sourceName]
-      setValue('sources', updated)
+      setValue('sources', updated, { shouldDirty: true })
       return updated
     })
   }
 
   const buildPayload = (data: CreateKnowledgeBaseFormData): KnowledgeBaseData => {
     const knowledgeSourcesPayload = selectedSources.map((name) => ({ name }))
+    const existingModel = knowledgeBase.models?.[0]?.azureOpenAIParameters || (knowledgeBase.models?.[0] as any)?.azureAIParameters
+    const resourceUri = existingModel?.resourceUri || process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT || ''
 
     return {
       name: knowledgeBase.name,
@@ -118,9 +133,10 @@ export function EditKnowledgeBaseForm({
         {
           kind: 'azureOpenAI',
           azureOpenAIParameters: {
-            resourceUri: process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT || '',
+            resourceUri,
             deploymentId: data.modelDeployment,
             modelName: data.modelDeployment,
+            ...(existingModel?.apiKey ? { apiKey: existingModel.apiKey } : {}),
           },
         },
       ],
@@ -148,8 +164,8 @@ export function EditKnowledgeBaseForm({
 
       toast({
         type: 'success',
-        title: 'Knowledge base updated',
-        description: 'Updates saved successfully.',
+        title: 'Changes saved',
+        description: `Knowledge base "${knowledgeBase.name}" has been updated successfully.`,
       })
     } catch (error) {
       console.error('Failed to update knowledge base:', error)
@@ -163,16 +179,22 @@ export function EditKnowledgeBaseForm({
     }
   }
 
-  const handleDelete = async () => {
-    if (!onDelete) return
+  const handleDeleteClick = () => {
+    setShowDeleteDialog(true)
+    setDeleteConfirmName('')
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!onDelete || deleteConfirmName !== knowledgeBase.name) return
 
     try {
       setIsDeleting(true)
+      setShowDeleteDialog(false)
       await onDelete()
       toast({
         type: 'success',
         title: 'Knowledge base deleted',
-        description: 'The knowledge base has been removed.',
+        description: `"${knowledgeBase.name}" has been permanently removed.`,
       })
     } catch (error) {
       console.error('Failed to delete knowledge base:', error)
@@ -189,14 +211,14 @@ export function EditKnowledgeBaseForm({
   return (
     <div className={className}>
       <FormFrame
-        title={`Edit ${knowledgeBase.name}`}
-        description="Update your knowledge base configuration."
-        actions={[
+        title={isEditMode ? `Edit ${knowledgeBase.name}` : `View ${knowledgeBase.name}`}
+        description={isEditMode ? "Update your knowledge base configuration." : "View your knowledge base configuration."}
+        actions={isEditMode ? [
           ...(onDelete
             ? [
                 {
                   label: 'Delete knowledge base',
-                  onClick: handleDelete,
+                  onClick: handleDeleteClick,
                   variant: 'outline' as const,
                   loading: isDeleting,
                   disabled: isSubmitting || isDeleting,
@@ -213,6 +235,12 @@ export function EditKnowledgeBaseForm({
             onClick: handleSubmit(handleFormSubmit),
             loading: isSubmitting,
             disabled: isSubmitting || isDeleting || selectedSources.length === 0,
+          },
+        ] : [
+          {
+            label: 'Back',
+            onClick: onCancel,
+            variant: 'ghost' as const,
           },
         ]}
       >
@@ -245,6 +273,7 @@ export function EditKnowledgeBaseForm({
                       setValue('modelDeployment', value)
                       trigger('modelDeployment')
                     }}
+                    disabled={!isEditMode}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a deployment" />
@@ -275,6 +304,7 @@ export function EditKnowledgeBaseForm({
                     onValueChange={(value) => {
                       setValue('outputModality', value as 'extractiveData' | 'answerSynthesis')
                     }}
+                    disabled={!isEditMode}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select output mode" />
@@ -301,6 +331,7 @@ export function EditKnowledgeBaseForm({
                   {...register('description')}
                   placeholder="e.g., 'Product documentation and support articles for customer service team'"
                   rows={3}
+                  disabled={!isEditMode}
                 />
               </FormControl>
               <FormDescription>Helps team members understand the knowledge base purpose.</FormDescription>
@@ -324,6 +355,7 @@ export function EditKnowledgeBaseForm({
                     placeholder="e.g., 'Always start with a summary. Use bullet points for lists. Keep responses under 3 paragraphs.'"
                     rows={4}
                     maxLength={500}
+                    disabled={!isEditMode}
                   />
                 </FormControl>
                 <FormDescription>Optional instructions to customize response style and tone.</FormDescription>
@@ -348,13 +380,14 @@ export function EditKnowledgeBaseForm({
                     knowledgeSources.map((source) => (
                       <label
                         key={source.name}
-                        className="flex items-center space-x-3 p-2 rounded hover:bg-bg-hover cursor-pointer"
+                        className={`flex items-center space-x-3 p-2 rounded ${isEditMode ? 'hover:bg-bg-hover cursor-pointer' : 'cursor-default'}`}
                       >
                         <input
                           type="checkbox"
                           checked={selectedSources.includes(source.name)}
                           onChange={() => toggleSource(source.name)}
                           className="rounded border-stroke-divider"
+                          disabled={!isEditMode}
                         />
                         <div className="flex-1">
                           <span className="text-sm font-medium">{source.name}</span>
@@ -387,6 +420,7 @@ export function EditKnowledgeBaseForm({
                   placeholder="e.g., 'For product questions, prioritize the documentation source. For pricing, use the pricing database.'"
                   rows={4}
                   maxLength={500}
+                  disabled={!isEditMode}
                 />
               </FormControl>
               <FormDescription>Optional instructions to customize how information is retrieved from your sources.</FormDescription>
@@ -395,6 +429,54 @@ export function EditKnowledgeBaseForm({
           </div>
         </form>
       </FormFrame>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-destructive/10">
+                <Warning20Regular className="h-5 w-5 text-destructive" />
+              </div>
+              <DialogTitle>Delete Knowledge Base</DialogTitle>
+            </div>
+            <DialogDescription className="mt-3">
+              This action cannot be undone. This will permanently delete the knowledge base and remove all associated configurations.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="pt-6 pb-4 space-y-3">
+            <FormLabel className="block text-sm font-medium">
+              Type <span className="font-mono font-semibold text-fg-default">{knowledgeBase.name}</span> to confirm:
+            </FormLabel>
+            <Input
+              value={deleteConfirmName}
+              onChange={(e) => setDeleteConfirmName(e.target.value)}
+              placeholder={knowledgeBase.name}
+              className="w-full"
+              autoComplete="off"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false)
+                setDeleteConfirmName('')
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleteConfirmName !== knowledgeBase.name || isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Knowledge Base'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

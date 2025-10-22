@@ -96,7 +96,7 @@ export function LandingPage() {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0.3])
 
   return (
-  <div ref={containerRef} className="flex-1 bg-gradient-to-br from-bg-canvas via-bg-card to-bg-canvas flex flex-col overflow-x-hidden hide-scrollbar">
+  <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-bg-canvas via-bg-card to-bg-canvas flex flex-col overflow-x-hidden">
       {/* Animated background gradient orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -351,15 +351,13 @@ export function LandingPage() {
       </div>
 
       {/* Footer */}
-      <ScrollReveal>
-        <footer className="relative z-10 border-t border-stroke-divider px-6 py-8 text-sm text-fg-muted">
-          <div className="max-w-6xl mx-auto text-center">
-            <p>
-              Made with <span role="img" aria-label="love">❤️</span> by Azure AI Search Product Group
-            </p>
-          </div>
-        </footer>
-      </ScrollReveal>
+      <footer className="relative z-10 border-t border-stroke-divider bg-bg-card/80 backdrop-blur-sm px-6 py-8 text-sm text-fg-muted mt-auto">
+        <div className="max-w-6xl mx-auto text-center">
+          <p>
+            Made with <span role="img" aria-label="love">❤️</span> by Azure AI Search Product Group
+          </p>
+        </div>
+      </footer>
 
       {/* Scroll Progress Indicator */}
       <motion.div

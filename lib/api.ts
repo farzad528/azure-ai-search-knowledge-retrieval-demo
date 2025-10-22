@@ -163,6 +163,8 @@ export async function retrieveFromKnowledgeBase(
 
   if (!response.ok) {
     let errorMessage = `Failed to retrieve from knowledge base (${response.status})`
+    let detailedError = ''
+    
     try {
       const errorData = await response.json()
       console.error('❌ API Error Response:', errorData)
@@ -170,17 +172,29 @@ export async function retrieveFromKnowledgeBase(
       // Extract detailed error information
       if (errorData.azureError) {
         console.error('❌ Azure Error Details:', errorData.azureError)
+        if (typeof errorData.azureError === 'object') {
+          detailedError = errorData.azureError.error?.message || errorData.azureError.message || JSON.stringify(errorData.azureError)
+        } else {
+          detailedError = String(errorData.azureError)
+        }
       }
       if (errorData.details) {
         console.error('❌ Error Details:', errorData.details)
+        detailedError = detailedError ? `${detailedError} | ${errorData.details}` : errorData.details
       }
       
       errorMessage = errorData.error?.message || errorData.error || errorData.message || errorMessage
+      
+      // Append detailed error if available
+      if (detailedError) {
+        errorMessage = `${errorMessage}\n\nDetails: ${detailedError}`
+      }
     } catch (parseError) {
       console.error('❌ Failed to parse error response:', parseError)
       try {
         const textError = await response.text()
         console.error('❌ Error response text:', textError)
+        errorMessage = `${errorMessage}\n\nRaw error: ${textError}`
       } catch {
         // Ignore
       }

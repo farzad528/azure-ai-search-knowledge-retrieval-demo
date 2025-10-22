@@ -126,13 +126,6 @@ export function AppShell({ children }: AppShellProps) {
           <div className={cn('flex-1 min-h-0', showSidebar && !pathname.includes('/playground') && !pathname.includes('/test') ? 'px-6 pb-16 pt-6 md:px-10' : '')}>
             {children}
           </div>
-          {showSidebar && (
-            <footer className="sticky bottom-0 flex items-center justify-center border-t border-glass-border bg-glass-surface px-6 py-4 text-xs text-fg-muted backdrop-blur-surface">
-              <span>
-                Made with <span role="img" aria-label="love">❤️</span> by Azure AI Search Product Group
-              </span>
-            </footer>
-          )}
         </main>
       </div>
     </div>
