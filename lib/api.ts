@@ -21,6 +21,7 @@ interface Message {
 
 interface RetrieveParams {
   xMsUserToken?: string
+  globalHeaders?: Record<string, string>
   [key: string]: any
 }
 
@@ -110,7 +111,7 @@ export async function updateKnowledgeBase(knowledgeBaseId: string, knowledgeBase
 
   if (!response.ok) {
     const errorData = await response.json()
-  throw new Error(errorData.error || 'Failed to update knowledge base')
+    throw new Error(errorData.error || 'Failed to update knowledge base')
   }
 
   return response.json()
@@ -147,13 +148,38 @@ export async function retrieveFromKnowledgeBase(
     }
   }
 
+  // Build headers: start with content-type, add global headers from params, then add ACL token
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...(userAclToken ? { 'x-ms-query-source-authorization': userAclToken } : {})
+    'Content-Type': 'application/json'
   }
 
-  const payload = { messages, ...params }
+  // Add global headers from runtime settings if provided
+  if (params.globalHeaders && typeof params.globalHeaders === 'object') {
+    Object.entries(params.globalHeaders as Record<string, string>).forEach(([key, value]) => {
+      if (key && value && typeof value === 'string') {
+        headers[key] = value
+      }
+    })
+  }
+
+  // Legacy support: add ACL token if provided via xMsUserToken
+  if (userAclToken) {
+    headers['x-ms-query-source-authorization'] = userAclToken
+  }
+
+  const payload: any = { messages, ...params }
   delete payload.xMsUserToken
+  delete payload.globalHeaders // Don't send globalHeaders in body, only as HTTP headers
+
+  // 🔍 DEBUG: Log the complete request payload being sent
+  console.log('═══════════════════════════════════════════════════════════')
+  console.log('📤 [CLIENT] Sending request to Knowledge Base')
+  console.log('═══════════════════════════════════════════════════════════')
+  console.log('📍 Knowledge Base ID:', knowledgeBaseId)
+  console.log('🔐 Has User ACL Token:', !!userAclToken)
+  console.log('📦 Complete Payload:', JSON.stringify(payload, null, 2))
+  console.log('📋 Headers:', JSON.stringify(headers, null, 2))
+  console.log('───────────────────────────────────────────────────────────')
 
   const response = await fetch(`${KNOWLEDGE_BASES_BASE_PATH}/${knowledgeBaseId}/retrieve`, {
     method: 'POST',
@@ -165,9 +191,11 @@ export async function retrieveFromKnowledgeBase(
     let errorMessage = `Failed to retrieve from knowledge base (${response.status})`
     let detailedError = ''
     
+    console.log('❌ [CLIENT] Request failed with status:', response.status, response.statusText)
+    
     try {
       const errorData = await response.json()
-      console.error('❌ API Error Response:', errorData)
+      console.error('❌ [CLIENT] API Error Response:', errorData)
       
       // Extract detailed error information
       if (errorData.azureError) {
@@ -190,18 +218,21 @@ export async function retrieveFromKnowledgeBase(
         errorMessage = `${errorMessage}\n\nDetails: ${detailedError}`
       }
     } catch (parseError) {
-      console.error('❌ Failed to parse error response:', parseError)
+      console.error('❌ [CLIENT] Failed to parse error response:', parseError)
       try {
         const textError = await response.text()
-        console.error('❌ Error response text:', textError)
+        console.error('❌ [CLIENT] Error response text:', textError)
         errorMessage = `${errorMessage}\n\nRaw error: ${textError}`
       } catch {
         // Ignore
       }
     }
+    console.log('═══════════════════════════════════════════════════════════')
     throw new Error(errorMessage)
   }
 
+  console.log('✅ [CLIENT] Request successful')
+  console.log('═══════════════════════════════════════════════════════════')
   return response.json()
 }
 

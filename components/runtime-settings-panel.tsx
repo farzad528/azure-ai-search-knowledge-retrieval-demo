@@ -28,6 +28,7 @@ interface RuntimeSettings {
   knowledgeSourceParams: KnowledgeSourceParam[]
   outputMode?: 'answerSynthesis' | 'extractiveData'
   reasoningEffort?: 'low' | 'medium' | 'high'
+  globalHeaders?: Record<string, string>
 }
 
 type KnowledgeSource = {
@@ -55,14 +56,18 @@ export function RuntimeSettingsPanel({
 }: RuntimeSettingsPanelProps) {
   const [expandedSources, setExpandedSources] = React.useState<Set<string>>(new Set())
   const [showTokens, setShowTokens] = React.useState<Record<string, boolean>>({})
+  const [showGlobalTokens, setShowGlobalTokens] = React.useState<Record<string, boolean>>({})
 
   // Initialize settings from knowledge base configuration
   React.useEffect(() => {
     if (settings.knowledgeSourceParams.length === 0 && knowledgeSources.length > 0) {
       const initialParams = knowledgeSources.map(ks => {
-        // Detect kind from name pattern if not provided
+          // Use kind from API (preferred) or attempt to infer from name pattern as fallback
         let kind = ks.kind || 'unknown'
+          let inferredFromName = false
+        
         if (kind === 'unknown' && ks.name) {
+            inferredFromName = true
           if (ks.name.toLowerCase().includes('mcp-')) {
             kind = 'mcpTool'
           } else if (ks.name.toLowerCase().includes('web')) {
@@ -73,7 +78,16 @@ export function RuntimeSettingsPanel({
             kind = ks.name.toLowerCase().includes('indexed') ? 'indexedSharePoint' : 'remoteSharePoint'
           } else if (ks.name.toLowerCase().includes('onelake')) {
             kind = 'indexedOneLake'
+            } else {
+              // Inference failed - log warning
+              console.warn(`⚠️ RuntimeSettingsPanel: Could not determine kind for knowledge source "${ks.name}". ` +
+                `API should provide kind value. Valid kinds: searchIndex, azureBlob, remoteSharePoint, mcpTool, web, indexedSharePoint, indexedOneLake`)
           }
+          
+            if (inferredFromName && kind !== 'unknown') {
+              console.warn(`⚠️ RuntimeSettingsPanel: Inferred kind "${kind}" from name pattern for "${ks.name}". ` +
+                `This is a fallback - API should provide kind value.`)
+            }
         }
         
         return {
@@ -152,10 +166,117 @@ export function RuntimeSettingsPanel({
     }
   }
 
+  // Global headers management
+  const addGlobalHeader = () => {
+    onSettingsChange({
+      ...settings,
+      globalHeaders: { ...settings.globalHeaders, '': '' }
+    })
+  }
+
+  const updateGlobalHeader = (oldKey: string, newKey: string, value: string) => {
+    const newHeaders = { ...settings.globalHeaders }
+    if (oldKey !== newKey) {
+      delete newHeaders[oldKey]
+    }
+    newHeaders[newKey] = value
+    onSettingsChange({ ...settings, globalHeaders: newHeaders })
+  }
+
+  const removeGlobalHeader = (key: string) => {
+    const newHeaders = { ...settings.globalHeaders }
+    delete newHeaders[key]
+    onSettingsChange({ ...settings, globalHeaders: newHeaders })
+  }
+
+  const toggleGlobalTokenVisibility = (headerKey: string) => {
+    setShowGlobalTokens(prev => ({ ...prev, [headerKey]: !prev[headerKey] }))
+  }
+
   const isMCPSource = (kind: string) => kind === 'mcpTool'
 
   return (
     <div className="space-y-6">
+      {/* Global Request Headers */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between border-b border-stroke-divider pb-2">
+          <h4 className="text-sm font-medium">Request Headers</h4>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={addGlobalHeader}
+            className="h-6 text-xs"
+          >
+            <Add20Regular className="h-3 w-3 mr-1" />
+            Add Header
+          </Button>
+        </div>
+
+        {settings.globalHeaders && Object.entries(settings.globalHeaders).length > 0 ? (
+          <div className="space-y-2">
+            {Object.entries(settings.globalHeaders).map(([key, value]) => {
+              const isAclHeader = key.toLowerCase() === 'x-ms-query-source-authorization'
+              const showToken = showGlobalTokens[key] || false
+
+              return (
+                <div key={key} className="flex gap-2 items-start">
+                  <Input
+                    placeholder="Header Name (e.g., x-ms-query-source-authorization)"
+                    value={key}
+                    onChange={(e) => updateGlobalHeader(key, e.target.value, value)}
+                    className="h-8 text-xs flex-1"
+                  />
+                  <div className="flex-1 relative">
+                    <Input
+                      type={isAclHeader && !showToken ? 'password' : 'text'}
+                      placeholder={isAclHeader ? 'eyJ0eXAiOiJKV1QiLCJh...' : 'Header Value'}
+                      value={value}
+                      onChange={(e) => updateGlobalHeader(key, key, e.target.value)}
+                      className="h-8 text-xs pr-8"
+                    />
+                    {isAclHeader && (
+                      <button
+                        type="button"
+                        onClick={() => toggleGlobalTokenVisibility(key)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg-default"
+                      >
+                        {showToken ? (
+                          <EyeOff20Regular className="h-4 w-4" />
+                        ) : (
+                          <Eye20Regular className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeGlobalHeader(key)}
+                    className="h-8 w-8 flex-shrink-0"
+                  >
+                    <Dismiss20Regular className="h-4 w-4" />
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-fg-muted italic">No request headers configured</p>
+        )}
+
+        <div className="bg-bg-subtle border border-stroke-divider rounded p-3 space-y-2">
+          <p className="text-xs text-fg-default font-medium">💡 Common Request Headers</p>
+          <ul className="text-xs text-fg-muted space-y-1 ml-4 list-disc">
+            <li>
+              <code className="px-1 py-0.5 bg-bg-card rounded">x-ms-query-source-authorization</code> - Required for Remote SharePoint, optional for other sources with ACL
+            </li>
+            <li>Use an Azure AD token with <code className="px-1 py-0.5 bg-bg-card rounded">https://search.azure.com</code> audience</li>
+          </ul>
+        </div>
+      </div>
+
       {/* Output Configuration */}
       <div className="space-y-4">
         <h4 className="text-sm font-medium border-b border-stroke-divider pb-2">Output Configuration</h4>
@@ -385,84 +506,107 @@ export function RuntimeSettingsPanel({
                     </div>
                   </div>
 
-                  {/* Custom Headers (MCP Sources) */}
-                  {isMCP && (
-                    <div className="space-y-2 pt-3 border-t border-stroke-divider">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-medium text-fg-default">Custom Headers</label>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => addHeader(param.knowledgeSourceName)}
-                          className="h-6 text-xs"
-                        >
-                          <Add20Regular className="h-3 w-3 mr-1" />
-                          Add Header
-                        </Button>
-                      </div>
-
-                      {param.headers && Object.entries(param.headers).length > 0 ? (
-                        <div className="space-y-2">
-                          {Object.entries(param.headers).map(([key, value]) => {
-                            const isAuthHeader = key.toLowerCase() === 'authorization'
-                            const tokenKey = `${param.knowledgeSourceName}-${key}`
-                            const showToken = showTokens[tokenKey] || false
-
-                            return (
-                              <div key={key} className="flex gap-2 items-start">
-                                <Input
-                                  placeholder="Header Name"
-                                  value={key}
-                                  onChange={(e) => updateHeader(param.knowledgeSourceName, key, e.target.value, value)}
-                                  className="h-8 text-xs flex-1"
-                                />
-                                <div className="flex-1 relative">
-                                  <Input
-                                    type={isAuthHeader && !showToken ? 'password' : 'text'}
-                                    placeholder={isAuthHeader ? 'MwcToken ey...' : 'Header Value'}
-                                    value={value}
-                                    onChange={(e) => updateHeader(param.knowledgeSourceName, key, key, e.target.value)}
-                                    className="h-8 text-xs pr-8"
-                                  />
-                                  {isAuthHeader && (
-                                    <button
-                                      type="button"
-                                      onClick={() => toggleTokenVisibility(param.knowledgeSourceName, key)}
-                                      className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg-default"
-                                    >
-                                      {showToken ? (
-                                        <EyeOff20Regular className="h-4 w-4" />
-                                      ) : (
-                                        <Eye20Regular className="h-4 w-4" />
-                                      )}
-                                    </button>
-                                  )}
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => removeHeader(param.knowledgeSourceName, key)}
-                                  className="h-8 w-8 flex-shrink-0"
-                                >
-                                  <Dismiss20Regular className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-fg-muted italic">No custom headers configured</p>
-                      )}
-
-                      {isMCP && (
-                        <p className="text-xs text-fg-muted mt-2">
-                          💡 MCP sources may require custom headers like Authorization tokens
-                        </p>
-                      )}
+                  {/* Custom Headers (All Sources) */}
+                  <div className="space-y-2 pt-3 border-t border-stroke-divider">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-fg-default">Custom Headers</label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => addHeader(param.knowledgeSourceName)}
+                        className="h-6 text-xs"
+                      >
+                        <Add20Regular className="h-3 w-3 mr-1" />
+                        Add Header
+                      </Button>
                     </div>
-                  )}
+
+                    {param.headers && Object.entries(param.headers).length > 0 ? (
+                      <div className="space-y-2">
+                        {Object.entries(param.headers).map(([key, value]) => {
+                          // Check if this is a sensitive header that should be masked
+                          const isAuthHeader = key.toLowerCase() === 'authorization'
+                          const isAclHeader = key.toLowerCase() === 'x-ms-query-source-authorization'
+                          const isSensitive = isAuthHeader || isAclHeader
+                          const tokenKey = `${param.knowledgeSourceName}-${key}`
+                          const showToken = showTokens[tokenKey] || false
+
+                          return (
+                            <div key={key} className="flex gap-2 items-start">
+                              <Input
+                                placeholder="Header Name"
+                                value={key}
+                                onChange={(e) => updateHeader(param.knowledgeSourceName, key, e.target.value, value)}
+                                className="h-8 text-xs flex-1"
+                              />
+                              <div className="flex-1 relative">
+                                <Input
+                                  type={isSensitive && !showToken ? 'password' : 'text'}
+                                  placeholder={
+                                    isAuthHeader 
+                                      ? 'MwcToken ey...' 
+                                      : isAclHeader 
+                                      ? 'eyJ0eXAiOiJKV1Q...' 
+                                      : 'Header Value'
+                                  }
+                                  value={value}
+                                  onChange={(e) => updateHeader(param.knowledgeSourceName, key, key, e.target.value)}
+                                  className="h-8 text-xs pr-8"
+                                />
+                                {isSensitive && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleTokenVisibility(param.knowledgeSourceName, key)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg-default"
+                                  >
+                                    {showToken ? (
+                                      <EyeOff20Regular className="h-4 w-4" />
+                                    ) : (
+                                      <Eye20Regular className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeHeader(param.knowledgeSourceName, key)}
+                                className="h-8 w-8 flex-shrink-0"
+                              >
+                                <Dismiss20Regular className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-fg-muted italic">No custom headers configured</p>
+                    )}
+
+                    {/* Context-specific help text */}
+                    {isMCP && (
+                      <p className="text-xs text-fg-muted mt-2">
+                        💡 MCP sources may require custom headers like <code className="px-1 py-0.5 bg-bg-subtle rounded">Authorization</code> tokens
+                      </p>
+                    )}
+                    {param.kind === 'remoteSharePoint' && (
+                      <p className="text-xs text-fg-muted mt-2">
+                        💡 Remote SharePoint requires <code className="px-1 py-0.5 bg-bg-subtle rounded">x-ms-query-source-authorization</code> header with search audience token
+                      </p>
+                    )}
+                    {param.kind === 'indexedSharePoint' && (
+                      <p className="text-xs text-fg-muted mt-2">
+                        💡 Indexed SharePoint may require <code className="px-1 py-0.5 bg-bg-subtle rounded">x-ms-query-source-authorization</code> header for access control
+                      </p>
+                    )}
+                    {!isMCP && param.kind !== 'remoteSharePoint' && param.kind !== 'indexedSharePoint' && (
+                      <p className="text-xs text-fg-muted mt-2">
+                        💡 Add custom headers for authentication or special requirements
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -13,7 +13,7 @@ import { InlineCitationsText } from '@/components/inline-citations'
 import { SourceKindIcon } from '@/components/source-kind-icon'
 import { MCPToolCallDisplay } from '@/components/mcp-tool-call-display'
 import { RuntimeSettingsPanel } from '@/components/runtime-settings-panel'
-import { fetchKnowledgeBases, retrieveFromKnowledgeBase } from '../lib/api'
+import { fetchKnowledgeBases, fetchKnowledgeSources, retrieveFromKnowledgeBase } from '../lib/api'
 import { KBViewCodeModal } from '@/components/kb-view-code-modal'
 import { processImageFile } from '@/lib/imageProcessing'
 import { useConversationStarters } from '@/lib/conversationStarters'
@@ -109,6 +109,7 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
   const [runtimeSettings, setRuntimeSettings] = useState<{
     outputMode?: 'answerSynthesis' | 'extractiveData'
     reasoningEffort?: 'low' | 'medium' | 'high'
+    globalHeaders?: Record<string, string>
     knowledgeSourceParams: Array<{
       knowledgeSourceName: string
       kind: string
@@ -122,6 +123,7 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
   }>({
     outputMode: 'answerSynthesis',
     reasoningEffort: 'low',
+    globalHeaders: {},
     knowledgeSourceParams: []
   })
 
@@ -145,19 +147,37 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
     const loadAgents = async () => {
       try {
         setAgentsLoading(true)
-  const data = await fetchKnowledgeBases()
+          // Fetch both knowledge bases and knowledge sources
+          const [kbData, ksData] = await Promise.all([
+            fetchKnowledgeBases(),
+            fetchKnowledgeSources()
+          ])
+
+          // Create a mapping of knowledge source name → kind
+          const ksKindMap = new Map<string, string>()
+          ksData.value?.forEach((ks: any) => {
+            if (ks.name && ks.kind) {
+              ksKindMap.set(ks.name, ks.kind)
+            }
+          })
+
+          const data = kbData
         const rawAgents = data.value || []
 
         const agentsList = rawAgents.map(agent => ({
           id: agent.name,
           name: agent.name,
           model: agent.models?.[0]?.azureOpenAIParameters?.modelName,
-          sources: (agent.knowledgeSources || []).map(ks => ks.name),
+            sources: (agent.knowledgeSources || []).map((ks: any) => ks.name),
           status: 'active',
           description: agent.description,
           outputConfiguration: agent.outputConfiguration,
           retrievalInstructions: agent.retrievalInstructions,
-          knowledgeSources: agent.knowledgeSources
+            // Enrich knowledge sources with actual kind values from API
+            knowledgeSources: (agent.knowledgeSources || []).map((ks: any) => ({
+              ...ks,
+              kind: ksKindMap.get(ks.name) || ks.kind // Use API kind or existing kind
+            }))
         }))
 
         setAgents(agentsList)
@@ -327,12 +347,20 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
       // Transform runtime settings to match API expectations
       const apiParams: any = {}
       
+      // Add global headers if present
+      if (runtimeSettings.globalHeaders && Object.keys(runtimeSettings.globalHeaders).filter(k => k && runtimeSettings.globalHeaders![k]).length > 0) {
+        apiParams.globalHeaders = runtimeSettings.globalHeaders
+      }
+      
       if (runtimeSettings.outputMode) {
         apiParams.outputMode = runtimeSettings.outputMode
       }
       
       if (runtimeSettings.reasoningEffort) {
-        apiParams.retrievalReasoningEffort = runtimeSettings.reasoningEffort
+        // Azure API expects an object with 'kind' property, not a string
+        apiParams.retrievalReasoningEffort = {
+          kind: runtimeSettings.reasoningEffort
+        }
       }
       
       if (runtimeSettings.knowledgeSourceParams && runtimeSettings.knowledgeSourceParams.length > 0) {
@@ -476,12 +504,20 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
       // Transform runtime settings to match API expectations
       const apiParams: any = {}
       
+      // Add global headers if present
+      if (runtimeSettings.globalHeaders && Object.keys(runtimeSettings.globalHeaders).filter(k => k && runtimeSettings.globalHeaders![k]).length > 0) {
+        apiParams.globalHeaders = runtimeSettings.globalHeaders
+      }
+      
       if (runtimeSettings.outputMode) {
         apiParams.outputMode = runtimeSettings.outputMode
       }
       
       if (runtimeSettings.reasoningEffort) {
-        apiParams.retrievalReasoningEffort = runtimeSettings.reasoningEffort
+        // Azure API expects an object with 'kind' property, not a string
+        apiParams.retrievalReasoningEffort = {
+          kind: runtimeSettings.reasoningEffort
+        }
       }
       
       if (runtimeSettings.knowledgeSourceParams && runtimeSettings.knowledgeSourceParams.length > 0) {
@@ -897,7 +933,9 @@ export function KBPlaygroundView({ preselectedAgent }: KBPlaygroundViewProps) {
 }
 
 function MessageBubble({ message, agent, showCostEstimates }: { message: Message; agent?: KnowledgeAgent; showCostEstimates?: boolean }) {
-  const [expanded, setExpanded] = useState(false)
+  // Auto-expand if there are references or activity
+  const hasContent = (message.references && message.references.length > 0) || (message.activity && message.activity.length > 0)
+  const [expanded, setExpanded] = useState(hasContent)
 
   const shouldShowSnippets = agent?.knowledgeSources?.some(ks => ks.includeReferenceSourceData === true)
   const isUser = message.role === 'user'
@@ -913,6 +951,13 @@ function MessageBubble({ message, agent, showCostEstimates }: { message: Message
 
   // Filter out MCP tools from regular references
   const regularReferences = message.references?.filter(ref => ref.type !== 'mcpTool') || []
+  
+  // Update expanded state when content changes
+  useEffect(() => {
+    if (hasContent) {
+      setExpanded(true)
+    }
+  }, [hasContent])
 
   return (
     <div className={cn('flex items-start gap-4', isUser && 'flex-row-reverse')}>
@@ -1045,6 +1090,7 @@ function MessageBubble({ message, agent, showCostEstimates }: { message: Message
                       </div>
                     )}
 
+
                     {/* Activity - Source Annotations & Metrics */}
                     {message.activity && message.activity.length > 0 && (
                       <div className="space-y-3">
@@ -1086,6 +1132,38 @@ function MessageBubble({ message, agent, showCostEstimates }: { message: Message
                                   </span>
                                 </div>
                               )
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Activity Details - Show all activity steps */}
+                        <div className="space-y-2">
+                          <h6 className="text-xs font-medium text-fg-muted uppercase tracking-wide">Activity Details</h6>
+                          <div className="flex flex-col gap-2">
+                            {message.activity.map((act, idx) => {
+                              // Show type, description, and arguments for each activity step
+                              // Some activity objects may have toolName/description, but not all. Use optional chaining and fallback.
+                              const label = act.knowledgeSourceName || (act as any).toolName || act.type || 'Step';
+                              const details: string[] = [];
+                              if (act.searchIndexArguments?.search) details.push(`Query: "${act.searchIndexArguments.search}"`);
+                              if (act.azureBlobArguments?.search) details.push(`Query: "${act.azureBlobArguments.search}"`);
+                              if ((act as any).toolName) details.push(`Tool: ${(act as any).toolName}`);
+                              if ((act as any).description) details.push((act as any).description);
+                              if (act.count !== undefined) details.push(`${act.count} results`);
+                              if (act.elapsedMs) details.push(`${act.elapsedMs}ms`);
+                              if (act.inputTokens || act.outputTokens) details.push(`Tokens: ${(act.inputTokens || 0) + (act.outputTokens || 0)}`);
+
+                              return (
+                                <div key={act.id || idx} className="flex items-start gap-2 p-2 bg-bg-subtle border border-stroke-divider rounded-md">
+                                  <SourceKindIcon kind={act.type} size={14} variant="plain" className="mt-0.5" />
+                                  <div className="flex-1">
+                                    <div className="text-xs font-medium text-fg-default">{label}</div>
+                                    {details.length > 0 && (
+                                      <div className="text-xs text-fg-muted mt-0.5">{details.join(' • ')}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
                             })}
                           </div>
                         </div>

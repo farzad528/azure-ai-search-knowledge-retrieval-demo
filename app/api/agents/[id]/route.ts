@@ -31,11 +31,15 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     const { id } = params;
     const body = await request.json();
 
+    // Support optimistic concurrency if '@odata.etag' present in payload
+    const ifMatch = typeof body['@odata.etag'] === 'string' ? body['@odata.etag'] : undefined;
+
     const response = await fetch(`${ENDPOINT}/agents/${id}?api-version=${API_VERSION}`, {
       method: 'PUT',
       headers: {
         'api-key': API_KEY!,
         'Content-Type': 'application/json',
+        ...(ifMatch ? { 'If-Match': ifMatch } : {})
       },
       body: JSON.stringify(body),
     });

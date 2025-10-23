@@ -98,10 +98,17 @@ export function EditKnowledgeBaseForm({
       outputModality: outputModality as 'extractiveData' | 'answerSynthesis',
       answerInstructions,
       retrievalInstructions: knowledgeBase.retrievalInstructions || '',
+      includeReferences: false,
+      includeReferenceSourceData: false,
+      alwaysQuerySource: false,
+      maxSubQueries: 5,
+      rerankerThreshold: 1.0,
+      includeActivity: false,
     },
   })
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch, trigger } = form
+  const { register, handleSubmit, formState, setValue, watch, trigger } = form
+  const { errors } = formState
   const watchedModel = watch('modelDeployment')
   const watchedOutputModality = watch('outputModality')
 
@@ -208,41 +215,47 @@ export function EditKnowledgeBaseForm({
     }
   }
 
+  const actions = React.useMemo(() => {
+    const actionsList = isEditMode ? [
+      ...(onDelete
+        ? [
+            {
+              label: 'Delete knowledge base',
+              onClick: handleDeleteClick,
+              variant: 'outline' as const,
+              loading: isDeleting,
+              disabled: isSubmitting || isDeleting,
+            },
+          ]
+        : []),
+      {
+        label: 'Cancel',
+        onClick: onCancel,
+        variant: 'ghost' as const,
+      },
+      {
+        label: 'Save changes',
+        onClick: handleSubmit(handleFormSubmit),
+        loading: isSubmitting,
+        disabled: isSubmitting || isDeleting || selectedSources.length === 0,
+      },
+    ] : [
+      {
+        label: 'Back',
+        onClick: onCancel,
+        variant: 'ghost' as const,
+      },
+    ]
+    
+    return actionsList
+  }, [isEditMode, isSubmitting, isDeleting, selectedSources.length, onDelete, onCancel, handleSubmit, handleFormSubmit, handleDeleteClick])
+
   return (
     <div className={className}>
       <FormFrame
         title={isEditMode ? `Edit ${knowledgeBase.name}` : `View ${knowledgeBase.name}`}
         description={isEditMode ? "Update your knowledge base configuration." : "View your knowledge base configuration."}
-        actions={isEditMode ? [
-          ...(onDelete
-            ? [
-                {
-                  label: 'Delete knowledge base',
-                  onClick: handleDeleteClick,
-                  variant: 'outline' as const,
-                  loading: isDeleting,
-                  disabled: isSubmitting || isDeleting,
-                },
-              ]
-            : []),
-          {
-            label: 'Cancel',
-            onClick: onCancel,
-            variant: 'ghost' as const,
-          },
-          {
-            label: 'Save changes',
-            onClick: handleSubmit(handleFormSubmit),
-            loading: isSubmitting,
-            disabled: isSubmitting || isDeleting || selectedSources.length === 0,
-          },
-        ] : [
-          {
-            label: 'Back',
-            onClick: onCancel,
-            variant: 'ghost' as const,
-          },
-        ]}
+        actions={actions}
       >
         <form className="space-y-6">
           <div className="space-y-4">

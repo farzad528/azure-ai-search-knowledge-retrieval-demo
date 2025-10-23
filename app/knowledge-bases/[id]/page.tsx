@@ -99,7 +99,9 @@ export default function KnowledgeBaseDetailPage() {
   }, [knowledgeBaseId])
 
   const handleUpdateKnowledgeBase = async (data: Partial<KnowledgeBaseData>) => {
-    if (!knowledgeBase) return
+    if (!knowledgeBase) {
+      return
+    }
 
     // Ensure required fields are included
     const payload = {
