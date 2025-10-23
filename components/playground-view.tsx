@@ -984,8 +984,8 @@ function MessageBubble({ message, onOpenDocument, agent }: { message: Message, o
                                 </span>
                               </p>
                               
-                              {/* Show snippet if includeReferenceSourceData is enabled and snippet is available */}
-                              {shouldShowSnippets && ref.sourceData?.snippet && (
+                              {/* Show snippet if available */}
+                              {ref.sourceData?.snippet && (
                                 <div className="mt-3 pt-3 border-t border-stroke-divider w-full">
                                   <div className="flex items-center gap-2 mb-2">
                                     <div className="text-[10px] font-medium text-fg-muted uppercase tracking-wide">
@@ -998,13 +998,6 @@ function MessageBubble({ message, onOpenDocument, agent }: { message: Message, o
                                       {cleanTextSnippet(ref.sourceData.snippet)}
                                     </div>
                                   </div>
-                                </div>
-                              )}
-                              
-                              {/* Show hint if snippets are available but feature is not enabled */}
-                              {!shouldShowSnippets && ref.sourceData?.snippet && (
-                                <div className="mt-2 text-[10px] text-fg-muted/60 italic">
-                                  💡 Enable "Include source data" in agent settings to show snippets
                                 </div>
                               )}
                             </div>

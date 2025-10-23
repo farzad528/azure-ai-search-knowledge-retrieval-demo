@@ -1068,8 +1068,8 @@ function MessageBubble({ message, agent, showCostEstimates }: { message: Message
                                 </span>
                               </p>
 
-                              {/* Show snippet if includeReferenceSourceData is enabled and snippet is available */}
-                              {shouldShowSnippets && ref.sourceData?.snippet && (
+                              {/* Show snippet if available */}
+                              {ref.sourceData?.snippet && (
                                 <div className="mt-3 pt-3 border-t border-stroke-divider w-full">
                                   <div className="flex items-center gap-2 mb-2">
                                     <div className="text-[10px] font-medium text-fg-muted uppercase tracking-wide">

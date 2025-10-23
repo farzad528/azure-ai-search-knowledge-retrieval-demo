@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Eye20Regular, EyeOff20Regular, Add20Regular, Dismiss20Regular, ChevronDown20Regular, ChevronUp20Regular } from '@fluentui/react-icons'
+import { Eye20Regular, EyeOff20Regular, Add20Regular, Dismiss20Regular, ChevronDown20Regular, ChevronUp20Regular, Info20Regular } from '@fluentui/react-icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { getRuntimeProperties, getHeaderGuidance, getKindDisplayName } from '@/lib/sourceKinds'
+import { SourceKindIcon } from '@/components/source-kind-icon'
 
 type KnowledgeSourceParam = {
   knowledgeSourceName: string
@@ -368,12 +370,17 @@ export function RuntimeSettingsPanel({
                 onClick={() => toggleSourceExpanded(param.knowledgeSourceName)}
                 className="w-full p-3 flex items-center justify-between bg-bg-subtle hover:bg-bg-hover transition-colors"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "flex items-center justify-center w-8 h-8 rounded",
+                    isMCP
+                      ? "bg-accent-subtle border border-accent/30" 
+                      : "bg-bg-card border border-stroke-divider"
+                  )}>
+                    <SourceKindIcon kind={param.kind} size={18} variant="plain" />
+                  </div>
                   <div className="text-sm font-medium text-fg-default">
                     {param.knowledgeSourceName}
-                  </div>
-                  <div className="text-xs text-fg-muted px-2 py-0.5 bg-bg-card rounded">
-                    {param.kind}
                   </div>
                 </div>
                 {isExpanded ? (
@@ -386,6 +393,22 @@ export function RuntimeSettingsPanel({
               {/* Expanded Content */}
               {isExpanded && (
                 <div className="p-4 space-y-4 bg-bg-card">
+                  {/* Kind-Specific Info Banner (MCP Tool only) */}
+                  {isMCP && (() => {
+                    const headerGuidance = getHeaderGuidance(param.kind)
+                    const kindDisplayName = getKindDisplayName(param.kind)
+                    
+                    return (
+                      <div className="bg-accent-subtle/30 border border-accent/30 rounded-md p-3 flex gap-2">
+                        <Info20Regular className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
+                        <div className="text-xs text-fg-default">
+                          <div className="font-medium mb-1">{kindDisplayName} Configuration</div>
+                          <div className="text-fg-muted">{headerGuidance.description}</div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+
                   {/* Boolean Toggles */}
                   <div className="space-y-3">
                     <label className="flex items-center justify-between cursor-pointer group">
@@ -506,21 +529,27 @@ export function RuntimeSettingsPanel({
                     </div>
                   </div>
 
-                  {/* Custom Headers (All Sources) */}
-                  <div className="space-y-2 pt-3 border-t border-stroke-divider">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-fg-default">Custom Headers</label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => addHeader(param.knowledgeSourceName)}
-                        className="h-6 text-xs"
-                      >
-                        <Add20Regular className="h-3 w-3 mr-1" />
-                        Add Header
-                      </Button>
-                    </div>
+                  {/* Custom Headers (MCP Tool Sources Only) */}
+                  {isMCP && (
+                    <div className="space-y-2 pt-3 border-t border-stroke-divider">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium text-fg-default">
+                          Custom Headers
+                          {getHeaderGuidance(param.kind).required && (
+                            <span className="ml-1 text-status-error">*</span>
+                          )}
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => addHeader(param.knowledgeSourceName)}
+                          className="h-6 text-xs"
+                        >
+                          <Add20Regular className="h-3 w-3 mr-1" />
+                          Add Header
+                        </Button>
+                      </div>
 
                     {param.headers && Object.entries(param.headers).length > 0 ? (
                       <div className="space-y-2">
@@ -582,31 +611,48 @@ export function RuntimeSettingsPanel({
                         })}
                       </div>
                     ) : (
-                      <p className="text-xs text-fg-muted italic">No custom headers configured</p>
+                      <p className="text-xs text-fg-muted italic">
+                        {getHeaderGuidance(param.kind).required 
+                          ? 'No headers configured - add required headers to proceed'
+                          : 'No custom headers configured'
+                        }
+                      </p>
                     )}
 
-                    {/* Context-specific help text */}
-                    {isMCP && (
-                      <p className="text-xs text-fg-muted mt-2">
-                        💡 MCP sources may require custom headers like <code className="px-1 py-0.5 bg-bg-subtle rounded">Authorization</code> tokens
-                      </p>
-                    )}
-                    {param.kind === 'remoteSharePoint' && (
-                      <p className="text-xs text-fg-muted mt-2">
-                        💡 Remote SharePoint requires <code className="px-1 py-0.5 bg-bg-subtle rounded">x-ms-query-source-authorization</code> header with search audience token
-                      </p>
-                    )}
-                    {param.kind === 'indexedSharePoint' && (
-                      <p className="text-xs text-fg-muted mt-2">
-                        💡 Indexed SharePoint may require <code className="px-1 py-0.5 bg-bg-subtle rounded">x-ms-query-source-authorization</code> header for access control
-                      </p>
-                    )}
-                    {!isMCP && param.kind !== 'remoteSharePoint' && param.kind !== 'indexedSharePoint' && (
-                      <p className="text-xs text-fg-muted mt-2">
-                        💡 Add custom headers for authentication or special requirements
-                      </p>
-                    )}
-                  </div>
+                    {/* Context-specific help text with guidance */}
+                    {(() => {
+                      const guidance = getHeaderGuidance(param.kind)
+                      
+                      if (guidance.headerName) {
+                        return (
+                          <div className="bg-bg-subtle border border-stroke-divider rounded p-3 space-y-2 mt-2">
+                            <p className="text-xs text-fg-default font-medium">
+                              💡 {guidance.required ? 'Required' : 'Recommended'} Header Configuration
+                            </p>
+                            <div className="space-y-1">
+                              <div className="text-xs text-fg-muted">
+                                <span className="font-medium">Header Name:</span>{' '}
+                                <code className="px-1 py-0.5 bg-bg-card rounded">{guidance.headerName}</code>
+                              </div>
+                              {guidance.placeholder && (
+                                <div className="text-xs text-fg-muted">
+                                  <span className="font-medium">Example:</span>{' '}
+                                  <code className="px-1 py-0.5 bg-bg-card rounded text-[10px]">{guidance.placeholder}</code>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      }
+                      
+                      return (
+                        <p className="text-xs text-fg-muted mt-2">
+                          💡 {guidance.description}
+                        </p>
+                      )
+                    })()}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
