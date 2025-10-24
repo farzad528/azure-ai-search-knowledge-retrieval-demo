@@ -13,7 +13,7 @@ export async function GET() {
       )
     }
 
-    const url = `${ENDPOINT}/knowledgebases?api-version=${API_VERSION}`
+    const url = `${ENDPOINT}/knowledgeBases?api-version=${API_VERSION}`
     
     const response = await fetch(url, {
       headers: {
