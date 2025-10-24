@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AgentAvatar } from '@/components/agent-avatar'
 import { StatusPill } from '@/components/shared/status-pill'
+import { KnowledgeSourceStatusIndicator } from '@/components/knowledge-source-status'
 import { formatRelativeTime } from '@/lib/utils'
 import { useEditMode, withEditMode } from '@/lib/edit-mode'
 
@@ -85,12 +86,13 @@ export function KnowledgeBaseCard({ knowledgeBase }: KnowledgeBaseCardProps) {
               {(knowledgeBase.sourceDetails ? knowledgeBase.sourceDetails.map((sd) => sd.name) : knowledgeBase.sources)
                 .slice(0, 3)
                 .map((name, index) => (
-                  <span
+                  <div
                     key={`${knowledgeBaseId}-source-${index}`}
-                    className="inline-flex items-center rounded-full border border-glass-border bg-glass-surface px-2.5 py-1 text-xs font-medium text-fg-muted"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-glass-border bg-glass-surface px-2.5 py-1 text-xs font-medium text-fg-muted"
                   >
-                    {name}
-                  </span>
+                    <span>{name}</span>
+                    <KnowledgeSourceStatusIndicator sourceName={name} refreshInterval={30000} />
+                  </div>
                 ))}
               {knowledgeBase.sources.length > 3 && (
                 <span className="inline-flex items-center rounded-full border border-glass-border bg-glass-surface px-2.5 py-1 text-xs font-medium text-fg-muted">

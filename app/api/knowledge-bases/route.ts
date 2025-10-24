@@ -22,7 +22,7 @@ export async function GET() {
       )
     }
 
-    const url = `${ENDPOINT}/knowledgeBases?api-version=${API_VERSION}`
+    const url = `${ENDPOINT}/knowledgebases?api-version=${API_VERSION}`
     console.log('Fetching knowledge bases from:', url.replace(API_KEY, '***'))
 
     const response = await fetch(url, {

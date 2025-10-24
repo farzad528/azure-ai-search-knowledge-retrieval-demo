@@ -14,7 +14,7 @@ export async function GET() {
     }
 
     const response = await fetch(
-      `${ENDPOINT}/knowledgeSources?api-version=${API_VERSION}`,
+      `${ENDPOINT}/knowledgesources?api-version=${API_VERSION}`,
       {
         headers: {
           'api-key': API_KEY,
@@ -62,7 +62,7 @@ export async function PUT(req: NextRequest) {
     const sourceName = body.name
 
     const response = await fetch(
-      `${ENDPOINT}/knowledgeSources/${sourceName}?api-version=${API_VERSION}`,
+      `${ENDPOINT}/knowledgesources/${sourceName}?api-version=${API_VERSION}`,
       {
         method: 'PUT',
         headers: {

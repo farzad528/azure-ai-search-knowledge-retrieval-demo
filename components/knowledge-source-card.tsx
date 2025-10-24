@@ -5,15 +5,14 @@ import { Button } from '@/components/ui/button'
 import { formatRelativeTime } from '@/lib/utils'
 import Link from 'next/link'
 import { SourceKindIcon } from '@/components/source-kind-icon'
-import { StatusPill } from '@/components/shared/status-pill'
+import { KnowledgeSourceStatusIndicator } from '@/components/knowledge-source-status'
 
 type KnowledgeSource = {
   id: string
   name: string
-  kind: 'searchIndex' | 'web' | 'azureBlob' | 'indexedOneLake' | 'remoteSharePoint' | 'indexedSharePoint'
+  kind: 'searchIndex' | 'web' | 'azureBlob' | 'indexedOneLake' | 'remoteSharePoint' | 'indexedSharePoint' | 'ingestedSharePoint' | 'mcpTool'
   docCount?: number
   lastUpdated?: string
-  status?: string
 }
 
 interface KnowledgeSourceCardProps {
@@ -26,19 +25,13 @@ const kindConfig = {
   azureBlob: { label: 'Azure Blob' },
   indexedOneLake: { label: 'OneLake' },
   remoteSharePoint: { label: 'SharePoint' },
-  indexedSharePoint: { label: 'SharePoint' }
-}
-
-const statusConfig = {
-  active: { label: 'Active', variant: 'success' as const },
-  syncing: { label: 'Syncing', variant: 'info' as const },
-  error: { label: 'Error', variant: 'danger' as const },
-  inactive: { label: 'Inactive', variant: 'neutral' as const }
+  indexedSharePoint: { label: 'SharePoint' },
+  ingestedSharePoint: { label: 'SharePoint' },
+  mcpTool: { label: 'MCP Tool' }
 }
 
 export function KnowledgeSourceCard({ source }: KnowledgeSourceCardProps) {
   const config = kindConfig[source.kind]
-  const status = statusConfig[source.status as keyof typeof statusConfig] || statusConfig.active
 
   return (
     <Card className="transition-shadow duration-base ease-out hover:shadow-lg">
@@ -54,7 +47,7 @@ export function KnowledgeSourceCard({ source }: KnowledgeSourceCardProps) {
                 <span className="inline-flex items-center rounded-full border border-glass-border bg-glass-surface px-2 py-1 text-xs font-medium uppercase tracking-wide text-fg-muted">
                   {config.label}
                 </span>
-                <StatusPill variant={status.variant}>{status.label}</StatusPill>
+                <KnowledgeSourceStatusIndicator sourceName={source.name} />
               </div>
             </div>
           </div>

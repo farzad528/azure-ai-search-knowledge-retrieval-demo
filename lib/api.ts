@@ -287,8 +287,15 @@ export async function createFoundryAgent(agentData: any): Promise<any> {
   return response.json()
 }
 
-export async function getKnowledgeSourceStatus(sourceId: string): Promise<any> {
-  const response = await fetch(`/api/knowledge-sources/${sourceId}/status`)
+export async function getKnowledgeSourceStatus(sourceName: string): Promise<any> {
+  const response = await fetch(`/api/knowledge-sources/${sourceName}/status`, {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  })
 
   if (!response.ok) {
     throw new Error('Failed to get knowledge source status')

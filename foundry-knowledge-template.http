@@ -1,0 +1,844 @@
+###############################################################################
+# Azure AI Foundry Knowledge Base & Agent Template
+# API Version: 2025-11-01-preview
+#
+# DESCRIPTION:
+# This template provides a complete end-to-end workflow for building AI agents
+# with Azure AI Foundry and Azure AI Search Knowledge Bases. It includes:
+# - Creating knowledge sources from multiple data sources (Blob, SharePoint, OneLake, Web, MCP)
+# - Building knowledge bases with multiple sources
+# - Creating Foundry agents that can query knowledge bases
+# - Retrieval operations with various configurations
+#
+# PREREQUISITES:
+# 1. Azure AI Search resource
+# 2. Azure AI Foundry project
+# 3. Data sources (Azure Blob, SharePoint, OneLake, etc.)
+# 4. Embedding and chat models deployed in Foundry
+#
+# GETTING STARTED:
+# 1. Fill in all environment variables in the section below
+# 2. Run the API calls in sequence or individually as needed
+# 3. Use your favorite REST client (VS Code REST Client, Postman, etc.)
+###############################################################################
+
+###############################################################################
+# ENVIRONMENT VARIABLES - FILL THESE IN
+###############################################################################
+
+### Azure AI Search Configuration (REQUIRED)
+@searchEndpoint = https://your-search-service.search.windows.net
+@searchApiKey = your-search-admin-key
+@apiVersion = 2025-11-01-preview
+
+### Azure Blob Storage Configuration (REQUIRED for blob knowledge sources)
+# Format: DefaultEndpointsProtocol=https;AccountName=<name>;AccountKey=<key>;EndpointSuffix=core.windows.net
+@blobConnectionString = your-blob-storage-connection-string
+
+### Azure AI Foundry Project Configuration (REQUIRED)
+# Get from: Azure Portal -> Your AI Foundry Project -> Overview
+@foundryEndpoint = https://your-project.services.ai.azure.com/api/projects/your-project-name
+@foundryApiVersion = 2025-05-15-preview
+# Get token with: az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv
+@foundryToken = your-bearer-token-here
+
+### Azure OpenAI Configuration (REQUIRED)
+# API Key for model authentication
+@azureOpenAIKey = your-azure-openai-key
+# Embedding model deployment
+@embeddingDeployment = text-embedding-3-small
+@embeddingModel = text-embedding-3-small
+# Chat completion model deployment
+@chatDeployment = gpt-4o-mini
+@chatModel = gpt-4o-mini
+
+### SharePoint Configuration (OPTIONAL - only if using SharePoint sources)
+# HOW TO GET SHAREPOINT CONNECTION STRING:
+# 1. Get your tenant ID: az account show --query tenantId -o tsv
+# 2. Create App Registration in Azure Portal:
+#    - Azure AD -> App registrations -> New registration
+#    - Copy Application (client) ID -> this is ApplicationId
+#    - Copy Directory (tenant) ID -> this is TenantId
+# 3. Create Client Secret:
+#    - Certificates & secrets -> New client secret
+#    - Copy the VALUE (not Secret ID) -> this is ApplicationSecret
+# 4. Grant SharePoint Permissions:
+#    - API permissions -> Add permission -> SharePoint
+#    - Application permissions -> Sites.Read.All (or Sites.ReadWrite.All)
+#    - Grant admin consent
+# 5. Format below:
+@sharePointConnectionString = SharePointOnlineEndpoint=https://yourtenant.sharepoint.com/sites/yoursite;ApplicationId=your-app-id-guid;ApplicationSecret=your-secret;TenantId=your-tenant-id-guid
+
+### SharePoint Authorization Token (OPTIONAL - for remote SharePoint queries)
+# Get token with: az account get-access-token --resource https://search.azure.com --query accessToken -o tsv
+@sharePointAuthToken = your-sharepoint-auth-token
+
+### Microsoft Fabric / OneLake Configuration (OPTIONAL - only if using OneLake sources)
+# Get from: Fabric Portal -> Your Workspace -> Settings
+@fabricWorkspaceId = your-fabric-workspace-guid
+# Get from: Fabric Portal -> Your Lakehouse -> Properties
+@lakehouseItemId = your-lakehouse-item-guid
+
+### MCP Tool Authentication (OPTIONAL - only if using MCP sources)
+@exaApiKey = your-exa-api-key
+@githubToken = your-github-personal-access-token
+
+### Resource Names (CUSTOMIZE THESE - used throughout the template)
+@searchIndexName = my-products-index
+@searchIndexSourceName = my-index-source
+@blobSourceName = my-blob-source
+@sharePointSourceName = my-sharepoint-source
+@oneLakeSourceName = my-onelake-source
+@webSourceName = my-web-source
+@ingestedSharePointSourceName = my-ingested-sharepoint-source
+@mcpToolSourceName = my-mcp-tool-source
+@knowledgeBaseName = my-knowledge-base
+@assistantName = my-ai-assistant
+
+###############################################################################
+# STEP 1: CREATE SEARCH INDEX (OPTIONAL)
+# Skip this section if you already have a search index or only using ingested sources
+###############################################################################
+
+### 1.1. Create Search Index with Semantic Configuration
+PUT {{searchEndpoint}}/indexes/{{searchIndexName}}?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "name": "{{searchIndexName}}",
+  "fields": [
+    {
+      "name": "id",
+      "type": "Edm.String",
+      "key": true,
+      "filterable": true
+    },
+    {
+      "name": "title",
+      "type": "Edm.String",
+      "searchable": true
+    },
+    {
+      "name": "content",
+      "type": "Edm.String",
+      "searchable": true
+    },
+    {
+      "name": "category",
+      "type": "Edm.String",
+      "filterable": true
+    }
+  ],
+  "semantic": {
+    "defaultConfiguration": "default",
+    "configurations": [
+      {
+        "name": "default",
+        "prioritizedFields": {
+          "titleField": {
+            "fieldName": "title"
+          },
+          "prioritizedContentFields": [
+            {
+              "fieldName": "content"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+
+###
+
+### 1.2. Upload Sample Documents to Index
+POST {{searchEndpoint}}/indexes/{{searchIndexName}}/docs/index?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "value": [
+    {
+      "@search.action": "upload",
+      "id": "1",
+      "title": "Product Documentation",
+      "content": "This is sample product documentation that will be searchable.",
+      "category": "documentation"
+    },
+    {
+      "@search.action": "upload",
+      "id": "2",
+      "title": "User Guide",
+      "content": "Complete user guide with step-by-step instructions.",
+      "category": "guides"
+    },
+    {
+      "@search.action": "upload",
+      "id": "3",
+      "title": "FAQ",
+      "content": "Frequently asked questions and answers.",
+      "category": "support"
+    }
+  ]
+}
+
+###
+
+###############################################################################
+# STEP 2: CREATE KNOWLEDGE SOURCES
+# Create one or more knowledge sources based on your data
+###############################################################################
+
+### 2.1. List Existing Knowledge Sources
+GET {{searchEndpoint}}/knowledgeSources?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+###
+
+### 2.2. Create Search Index Knowledge Source
+# Use this to query an existing search index
+PUT {{searchEndpoint}}/knowledgeSources/{{searchIndexSourceName}}?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "name": "{{searchIndexSourceName}}",
+  "kind": "searchIndex",
+  "description": "Knowledge source targeting an existing search index",
+  "searchIndexParameters": {
+    "searchIndexName": "{{searchIndexName}}",
+    "searchFields": [
+      {
+        "name": "content"
+      },
+      {
+        "name": "title"
+      }
+    ],
+    "sourceDataFields": [
+      {
+        "name": "id"
+      },
+      {
+        "name": "category"
+      }
+    ],
+    "semanticConfigurationName": "default"
+  }
+}
+
+###
+
+### 2.3. Create Azure Blob Storage Knowledge Source
+# Use this to ingest and chunk documents from Azure Blob Storage
+PUT {{searchEndpoint}}/knowledgeSources/{{blobSourceName}}?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "name": "{{blobSourceName}}",
+  "kind": "azureBlob",
+  "description": "Knowledge source for Azure Blob Storage documents",
+  "azureBlobParameters": {
+    "connectionString": "{{blobConnectionString}}",
+    "containerName": "your-container-name",
+    "folderPath": "",
+    "isADLSGen2": false,
+    "ingestionParameters": {
+      "identity": null,
+      "embeddingModel": {
+        "kind": "azureOpenAI",
+        "azureOpenAIParameters": {
+          "resourceUri": "{{foundryEndpoint}}",
+          "deploymentId": "{{embeddingDeployment}}",
+          "modelName": "{{embeddingModel}}",
+          "apiKey": "{{azureOpenAIKey}}"
+        }
+      },
+      "chatCompletionModel": {
+        "kind": "azureOpenAI",
+        "azureOpenAIParameters": {
+          "resourceUri": "{{foundryEndpoint}}",
+          "deploymentId": "{{chatDeployment}}",
+          "modelName": "{{chatModel}}",
+          "apiKey": "{{azureOpenAIKey}}"
+        }
+      },
+      "disableImageVerbalization": false,
+      "contentExtractionMode": "minimal"
+    }
+  }
+}
+
+###
+
+### 2.4. Create Indexed SharePoint Knowledge Source
+# Use this to index documents from SharePoint Online
+PUT {{searchEndpoint}}/knowledgeSources/{{sharePointSourceName}}?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "name": "{{sharePointSourceName}}",
+  "kind": "indexedSharePoint",
+  "description": "Knowledge source for indexed SharePoint Online site",
+  "indexedSharePointParameters": {
+    "connectionString": "{{sharePointConnectionString}}",
+    "containerName": "allSiteLibraries",
+    "query": "",
+    "ingestionParameters": {
+      "identity": null,
+      "embeddingModel": {
+        "kind": "azureOpenAI",
+        "azureOpenAIParameters": {
+          "resourceUri": "{{foundryEndpoint}}",
+          "deploymentId": "{{embeddingDeployment}}",
+          "modelName": "{{embeddingModel}}",
+          "apiKey": "{{azureOpenAIKey}}"
+        }
+      },
+      "chatCompletionModel": {
+        "kind": "azureOpenAI",
+        "azureOpenAIParameters": {
+          "resourceUri": "{{foundryEndpoint}}",
+          "deploymentId": "{{chatDeployment}}",
+          "modelName": "{{chatModel}}",
+          "apiKey": "{{azureOpenAIKey}}"
+        }
+      },
+      "contentExtractionMode": "minimal"
+    }
+  }
+}
+
+###
+
+### 2.5. Create Indexed OneLake Knowledge Source
+# Use this to index documents from Microsoft Fabric OneLake
+PUT {{searchEndpoint}}/knowledgeSources/{{oneLakeSourceName}}?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "name": "{{oneLakeSourceName}}",
+  "kind": "indexedOneLake",
+  "description": "Knowledge source for Microsoft Fabric OneLake",
+  "indexedOneLakeParameters": {
+    "fabricWorkspaceId": "{{fabricWorkspaceId}}",
+    "lakehouseId": "{{lakehouseItemId}}",
+    "targetPath": "/Files/data",
+    "ingestionParameters": {
+      "identity": null,
+      "embeddingModel": {
+        "kind": "azureOpenAI",
+        "azureOpenAIParameters": {
+          "resourceUri": "{{foundryEndpoint}}",
+          "deploymentId": "{{embeddingDeployment}}",
+          "modelName": "{{embeddingModel}}",
+          "apiKey": "{{azureOpenAIKey}}"
+        }
+      },
+      "chatCompletionModel": {
+        "kind": "azureOpenAI",
+        "azureOpenAIParameters": {
+          "resourceUri": "{{foundryEndpoint}}",
+          "deploymentId": "{{chatDeployment}}",
+          "modelName": "{{chatModel}}",
+          "apiKey": "{{azureOpenAIKey}}"
+        }
+      },
+      "disableImageVerbalization": false,
+      "ingestionSchedule": {
+        "interval": "PT6H"
+      },
+      "contentExtractionMode": "minimal"
+    }
+  }
+}
+
+###
+
+### 2.6. Create Web Knowledge Source
+# Use this to enable web search capabilities in your knowledge base
+PUT {{searchEndpoint}}/knowledgeSources/{{webSourceName}}?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "name": "{{webSourceName}}",
+  "kind": "web",
+  "description": "Knowledge source for web search integration"
+}
+
+###
+
+### 2.7. Create Ingested SharePoint Knowledge Source
+# Use this to ingest and chunk SharePoint documents (alternative to indexed)
+PUT {{searchEndpoint}}/knowledgeSources/{{ingestedSharePointSourceName}}?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "name": "{{ingestedSharePointSourceName}}",
+  "kind": "ingestedSharePoint",
+  "description": "Knowledge source for ingested SharePoint documents",
+  "ingestedSharePointParameters": {
+    "connectionString": "{{sharePointConnectionString}}",
+    "containerName": "defaultSiteLibrary",
+    "query": "*.docx OR *.pdf",
+    "ingestionParameters": {
+      "identity": null,
+      "embeddingModel": {
+        "kind": "azureOpenAI",
+        "azureOpenAIParameters": {
+          "resourceUri": "{{foundryEndpoint}}",
+          "deploymentId": "{{embeddingDeployment}}",
+          "modelName": "{{embeddingModel}}",
+          "apiKey": "{{azureOpenAIKey}}"
+        }
+      },
+      "chatCompletionModel": {
+        "kind": "azureOpenAI",
+        "azureOpenAIParameters": {
+          "resourceUri": "{{foundryEndpoint}}",
+          "deploymentId": "{{chatDeployment}}",
+          "modelName": "{{chatModel}}",
+          "apiKey": "{{azureOpenAIKey}}"
+        }
+      },
+      "ingestionSchedule": {
+        "interval": "PT24H"
+      },
+      "contentExtractionMode": "minimal"
+    }
+  }
+}
+
+###
+
+### 2.8. Create MCP Tool Knowledge Source (Private Preview)
+# Use this to integrate external MCP-compatible services (Exa, custom APIs, etc.)
+PUT {{searchEndpoint}}/knowledgeSources/{{mcpToolSourceName}}?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "name": "{{mcpToolSourceName}}",
+  "kind": "mcpTool",
+  "description": "MCP tool knowledge source for external service integration",
+  "mcpToolParameters": {
+    "serverURL": "https://api.exa.ai/mcp",
+    "toolName": "search"
+  }
+}
+
+###
+
+### 2.9. Get Knowledge Source Status
+# Check the ingestion status of a knowledge source
+GET {{searchEndpoint}}/knowledgesources/{{blobSourceName}}/status?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+###
+
+### 2.10. Get Specific Knowledge Source Details
+GET {{searchEndpoint}}/knowledgeSources/{{blobSourceName}}?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+###
+
+###############################################################################
+# STEP 3: CREATE KNOWLEDGE BASE
+# Combine multiple knowledge sources into a single knowledge base
+###############################################################################
+
+### 3.1. List All Knowledge Bases
+GET {{searchEndpoint}}/knowledgeBases?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+###
+
+### 3.2. Create Knowledge Base with Multiple Sources
+PUT {{searchEndpoint}}/knowledgeBases/{{knowledgeBaseName}}?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "name": "{{knowledgeBaseName}}",
+  "description": "Comprehensive knowledge base with multiple source types",
+  "knowledgeSources": [
+    {
+      "name": "{{searchIndexSourceName}}"
+    },
+    {
+      "name": "{{blobSourceName}}"
+    },
+    {
+      "name": "{{webSourceName}}"
+    }
+  ],
+  "models": [
+    {
+      "kind": "azureOpenAI",
+      "azureOpenAIParameters": {
+        "resourceUri": "{{foundryEndpoint}}",
+        "deploymentId": "{{chatDeployment}}",
+        "modelName": "{{chatModel}}",
+        "apiKey": "{{azureOpenAIKey}}"
+      }
+    }
+  ],
+  "outputMode": "answerSynthesis",
+  "retrievalInstructions": "Focus on providing accurate, technical information from official documentation and knowledge sources.",
+  "answerInstructions": "Provide concise, actionable responses with relevant citations. When uncertain, indicate the confidence level."
+}
+
+###
+
+### 3.3. Get Knowledge Base Details
+GET {{searchEndpoint}}/knowledgeBases/{{knowledgeBaseName}}?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+###
+
+###############################################################################
+# STEP 4: QUERY KNOWLEDGE BASE
+# Retrieve information from your knowledge base
+###############################################################################
+
+### 4.1. Simple Retrieval Query
+POST {{searchEndpoint}}/knowledgeBases/{{knowledgeBaseName}}/retrieve?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What are the key features of this product?"
+        }
+      ]
+    }
+  ],
+  "includeActivity": true
+}
+
+###
+
+### 4.2. Advanced Retrieval with Parameters
+POST {{searchEndpoint}}/knowledgeBases/{{knowledgeBaseName}}/retrieve?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Provide detailed technical specifications and pricing information"
+        }
+      ]
+    }
+  ],
+  "maxRuntimeInSeconds": 90,
+  "maxOutputSize": 5000,
+  "retrievalReasoningEffort": {
+    "kind": "medium"
+  },
+  "includeActivity": true,
+  "outputMode": "answerSynthesis",
+  "knowledgeSourceParams": [
+    {
+      "knowledgeSourceName": "{{searchIndexSourceName}}",
+      "kind": "searchIndex",
+      "includeReferences": true,
+      "includeReferenceSourceData": true,
+      "alwaysQuerySource": false,
+      "rerankerThreshold": 0.5
+    },
+    {
+      "knowledgeSourceName": "{{blobSourceName}}",
+      "kind": "azureBlob",
+      "includeReferences": true,
+      "includeReferenceSourceData": false,
+      "alwaysQuerySource": true,
+      "rerankerThreshold": 0.3
+    }
+  ]
+}
+
+###
+
+### 4.3. Retrieve with Web Search (Runtime Only)
+POST {{searchEndpoint}}/knowledgeBases/{{knowledgeBaseName}}/retrieve?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What are the latest industry trends and news?"
+        }
+      ]
+    }
+  ],
+  "includeActivity": true,
+  "knowledgeSourceParams": [
+    {
+      "knowledgeSourceName": "web-search-runtime",
+      "kind": "web",
+      "includeReferences": true,
+      "includeReferenceSourceData": false,
+      "alwaysQuerySource": true,
+      "rerankerThreshold": 0.2,
+      "language": "en",
+      "market": "en-US",
+      "count": 10,
+      "freshness": "Week"
+    }
+  ]
+}
+
+###
+
+### 4.4. Retrieve with Remote SharePoint (Runtime Only)
+POST {{searchEndpoint}}/knowledgeBases/{{knowledgeBaseName}}/retrieve?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+x-ms-query-source-authorization: {{sharePointAuthToken}}
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Find recent project documentation"
+        }
+      ]
+    }
+  ],
+  "includeActivity": true,
+  "knowledgeSourceParams": [
+    {
+      "knowledgeSourceName": "remote-sharepoint-runtime",
+      "kind": "remoteSharePoint",
+      "includeReferences": true,
+      "includeReferenceSourceData": true,
+      "alwaysQuerySource": false,
+      "rerankerThreshold": 0.45,
+      "filterExpressionAddOn": "ContentType='Document'"
+    }
+  ]
+}
+
+###
+
+### 4.5. Retrieve with MCP Tools (Private Preview)
+POST {{searchEndpoint}}/knowledgeBases/{{knowledgeBaseName}}/retrieve?api-version={{apiVersion}}
+api-key: {{searchApiKey}}
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What are the latest developments in AI search?"
+        }
+      ]
+    }
+  ],
+  "includeActivity": true,
+  "retrievalReasoningEffort": {
+    "kind": "medium"
+  },
+  "maxRuntimeInSeconds": 45,
+  "knowledgeSourceParams": [
+    {
+      "knowledgeSourceName": "{{mcpToolSourceName}}",
+      "kind": "mcpTool",
+      "headers": {
+        "x-api-key": "{{exaApiKey}}"
+      },
+      "includeReferences": true,
+      "includeReferenceSourceData": true,
+      "alwaysQuerySource": true,
+      "rerankerThreshold": 0.3
+    }
+  ]
+}
+
+###
+
+###############################################################################
+# STEP 5: CREATE FOUNDRY AGENT
+# Build an agent that can use your knowledge base via MCP
+###############################################################################
+
+### 5.1. List All Foundry Agents
+GET {{foundryEndpoint}}/assistants?api-version={{foundryApiVersion}}
+Authorization: Bearer {{foundryToken}}
+Content-Type: application/json
+
+###
+
+### 5.2. Create Foundry Agent with Knowledge Base
+POST {{foundryEndpoint}}/assistants?api-version={{foundryApiVersion}}
+Authorization: Bearer {{foundryToken}}
+Content-Type: application/json
+
+{
+  "name": "{{assistantName}}",
+  "instructions": "You are a helpful AI assistant with access to enterprise knowledge bases. Use the knowledge retrieval tool to answer questions accurately based on company documentation. Always cite your sources and indicate when you're uncertain.",
+  "model": "gpt-4o-mini",
+  "tools": [
+    {
+      "type": "mcp",
+      "server_url": "{{searchEndpoint}}/knowledgebases/{{knowledgeBaseName}}/mcp",
+      "description": "Knowledge retrieval tool for accessing enterprise documentation, product information, and support materials",
+      "auth": {
+        "type": "api_key",
+        "api_key": "{{searchApiKey}}"
+      }
+    }
+  ]
+}
+
+###
+
+### 5.3. Create Thread for Agent Conversation
+POST {{foundryEndpoint}}/threads?api-version={{foundryApiVersion}}
+Authorization: Bearer {{foundryToken}}
+Content-Type: application/json
+
+{
+  "messages": []
+}
+
+###
+
+### 5.4. Add Message to Thread
+# Replace thread_abc123 with actual thread ID from previous step
+# POST {{foundryEndpoint}}/threads/thread_abc123/messages?api-version={{foundryApiVersion}}
+# Authorization: Bearer {{foundryToken}}
+# Content-Type: application/json
+#
+# {
+#   "role": "user",
+#   "content": "What are the latest product updates and features?"
+# }
+
+###
+
+### 5.5. Run Agent on Thread
+# Replace thread_abc123 and asst_abc123 with actual IDs
+# POST {{foundryEndpoint}}/threads/thread_abc123/runs?api-version={{foundryApiVersion}}
+# Authorization: Bearer {{foundryToken}}
+# Content-Type: application/json
+#
+# {
+#   "assistant_id": "asst_abc123"
+# }
+
+###
+
+### 5.6. Get Run Status
+# Replace thread_abc123 and run_abc123 with actual IDs
+# GET {{foundryEndpoint}}/threads/thread_abc123/runs/run_abc123?api-version={{foundryApiVersion}}
+# Authorization: Bearer {{foundryToken}}
+# Content-Type: application/json
+
+###
+
+###############################################################################
+# STEP 6: CLEANUP (OPTIONAL)
+# Delete resources when no longer needed
+###############################################################################
+
+### 6.1. Delete Knowledge Base
+# DELETE {{searchEndpoint}}/knowledgeBases/{{knowledgeBaseName}}?api-version={{apiVersion}}
+# api-key: {{searchApiKey}}
+# Content-Type: application/json
+
+###
+
+### 6.2. Delete Knowledge Source
+# DELETE {{searchEndpoint}}/knowledgeSources/{{blobSourceName}}?api-version={{apiVersion}}
+# api-key: {{searchApiKey}}
+# Content-Type: application/json
+
+###
+
+### 6.3. Delete Search Index
+# DELETE {{searchEndpoint}}/indexes/{{searchIndexName}}?api-version={{apiVersion}}
+# api-key: {{searchApiKey}}
+# Content-Type: application/json
+
+###
+
+### 6.4. Delete Foundry Agent
+# DELETE {{foundryEndpoint}}/assistants/asst_abc123?api-version={{foundryApiVersion}}
+# Authorization: Bearer {{foundryToken}}
+# Content-Type: application/json
+
+###
+
+###############################################################################
+# REFERENCE: KNOWLEDGE SOURCE RUNTIME PARAMETERS
+###############################################################################
+#
+# Base Parameters (all source types):
+# - knowledgeSourceName: string (required)
+# - includeReferences: boolean (default: true)
+# - includeReferenceSourceData: boolean (default: false)
+# - alwaysQuerySource: boolean (default: false)
+# - rerankerThreshold: number (0.0 - 1.0, recommended: 0.3-0.5)
+#
+# searchIndex specific:
+# - filterAddOn: string (OData filter, e.g., "Status eq 'published'")
+#
+# web specific:
+# - language: string (e.g., "en", "es", "fr")
+# - market: string (e.g., "en-US", "en-GB")
+# - count: number (max results, default: 10)
+# - freshness: string ("Day", "Week", "Month", "Year")
+#
+# remoteSharePoint specific:
+# - filterExpressionAddOn: string (KQL filter)
+#
+# mcpTool specific:
+# - headers: object (authentication headers)
+#   Examples: { "x-api-key": "key" } or { "Authorization": "Bearer token" }
+#
+###############################################################################
+
+###############################################################################
+# AUTHENTICATION COMMANDS (FOR REFERENCE)
+###############################################################################
+#
+# Get Foundry Bearer Token:
+# az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv
+#
+# Get SharePoint Auth Token:
+# az account get-access-token --resource https://search.azure.com --query accessToken -o tsv
+#
+###############################################################################

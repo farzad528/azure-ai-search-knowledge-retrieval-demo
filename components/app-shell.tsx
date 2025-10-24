@@ -157,8 +157,8 @@ function Header({ onMenuClick, showSidebar }: HeaderProps) {
           <Link href="/" aria-label="Home" className="flex min-w-0 items-center gap-2 rounded-xl px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg-canvas">
             <Image src="/icons/search_icon.svg" alt="Azure AI Search" width={26} height={26} priority className="shrink-0" />
             <span className="truncate text-lg font-semibold leading-tight tracking-tight max-w-[9rem] sm:max-w-none">
-              <span className="hidden sm:inline">Azure AI Search - Knowledge Retrieval Demo</span>
-              <span className="sm:hidden">Knowledge Retrieval</span>
+              <span className="hidden sm:inline">Foundry Knowledge Demo</span>
+              <span className="sm:hidden">Foundry Demo</span>
             </span>
           </Link>
 
@@ -278,7 +278,7 @@ function Sidebar({ navigation, currentPath, isOpen, onClose, collapsed, onToggle
               <div className="flex h-16 items-center justify-between border-b border-glass-border px-4">
                 <Link href="/" aria-label="Home" className="flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg-canvas">
                   <Image src="/icons/search_icon.svg" alt="Azure AI Search" width={26} height={26} className="shrink-0" />
-                  <span className="truncate text-sm font-semibold leading-tight">Azure AI Search - Knowledge Retrieval Demo</span>
+                  <span className="truncate text-sm font-semibold leading-tight">Foundry Knowledge Demo</span>
                 </Link>
                 <Button
                   variant="ghost"

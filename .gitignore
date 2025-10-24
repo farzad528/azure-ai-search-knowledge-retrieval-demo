@@ -32,5 +32,6 @@ Thumbs.db
 
 
 
-# HTTP test files (exclude template)
+# HTTP test files - ignore all except template
 *.http
+!foundry-knowledge-template.http
