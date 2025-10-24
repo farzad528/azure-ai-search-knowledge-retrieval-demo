@@ -10,7 +10,7 @@ import { Info20Regular, ChevronDown20Regular, ChevronUp20Regular } from '@fluent
 // import { createAgent } from '@/lib/api' // Deprecated - agent functionality moved to Foundry
 import { getSourceKindLabel } from '@/lib/sourceKinds'
 
-// Form validation schema based on Azure AI Search 2025-08-01-Preview API
+// Form validation schema based on Azure AI Search 2025-11-01-Preview API
 const createAgentSchema = z.object({
   name: z.string().min(1, 'Agent name is required').max(50, 'Name must be 50 characters or less'),
   description: z.string().optional(),
@@ -82,7 +82,7 @@ export function CreateAgentForm({
     try {
       setIsSubmitting(true)
 
-      // Convert to Azure AI Search agent format (2025-08-01-Preview API)
+      // Convert to Azure AI Search agent format (2025-11-01-Preview API)
       // Based on actual API structure from existing agents
       const agentData = {
         name: data.name,

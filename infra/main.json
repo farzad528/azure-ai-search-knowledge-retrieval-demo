@@ -1117,7 +1117,7 @@
       "value": {
         "AZURE_SEARCH_ENDPOINT": "[reference(resourceId('Microsoft.Resources/deployments', 'deploy-search'), '2025-04-01').outputs.searchEndpoint.value]",
         "AZURE_SEARCH_API_KEY": "[reference(resourceId('Microsoft.Resources/deployments', 'deploy-search'), '2025-04-01').outputs.searchAdminKey.value]",
-        "AZURE_SEARCH_API_VERSION": "2025-08-01-preview",
+        "AZURE_SEARCH_API_VERSION": "2025-11-01-preview",
         "NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT": "[reference(resourceId('Microsoft.Resources/deployments', 'deploy-openai'), '2025-04-01').outputs.openAIEndpoint.value]",
         "AZURE_OPENAI_API_KEY": "[reference(resourceId('Microsoft.Resources/deployments', 'deploy-openai'), '2025-04-01').outputs.openAIKey.value]",
         "FOUNDRY_PROJECT_ENDPOINT": "[reference(resourceId('Microsoft.Resources/deployments', 'deploy-foundry'), '2025-04-01').outputs.projectEndpoint.value]",

@@ -253,7 +253,7 @@ output staticWebAppName string = staticWebApp.outputs.staticWebAppName
 output environmentVariables object = {
   AZURE_SEARCH_ENDPOINT: search.outputs.searchEndpoint
   AZURE_SEARCH_API_KEY: search.outputs.searchAdminKey
-  AZURE_SEARCH_API_VERSION: '2025-08-01-preview'
+  AZURE_SEARCH_API_VERSION: '2025-11-01-preview'
   NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT: openai.outputs.openAIEndpoint
   AZURE_OPENAI_API_KEY: openai.outputs.openAIKey
   FOUNDRY_PROJECT_ENDPOINT: foundry.outputs.projectEndpoint

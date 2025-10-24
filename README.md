@@ -83,8 +83,8 @@ Built on Azure AI Foundry Assistant Service:
             ▼                             ▼
    ┌─────────────────┐          ┌─────────────────┐
    │  Azure AI Search│          │ Azure AI Foundry│
-   │  Agents API     │          │ Assistant API   │
-   │  (2025-08-01)   │          │  (2025-05-01)   │
+   │ Knowledge Bases │          │ Assistant API   │
+   │(2025-11-01-prev)│          │  (2025-05-01)   │
    └────────┬────────┘          └────────┬────────┘
             │                             │
             │    ┌──────────────────┐    │
@@ -223,7 +223,7 @@ Edit `.env.local` with your Azure resource details:
 # Azure AI Search (REQUIRED)
 AZURE_SEARCH_ENDPOINT=https://your-search-service.search.windows.net
 AZURE_SEARCH_API_KEY=your-admin-key-from-azure-portal
-AZURE_SEARCH_API_VERSION=2025-08-01-preview
+AZURE_SEARCH_API_VERSION=2025-11-01-preview
 
 # Azure OpenAI (REQUIRED)
 NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT=https://your-openai.openai.azure.com
@@ -657,7 +657,7 @@ Go to your Vercel project settings → Environment Variables and add:
 # Azure AI Search
 AZURE_SEARCH_ENDPOINT=https://your-search.search.windows.net
 AZURE_SEARCH_API_KEY=your-admin-key
-AZURE_SEARCH_API_VERSION=2025-08-01-preview
+AZURE_SEARCH_API_VERSION=2025-11-01-preview
 
 # Azure OpenAI
 NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT=https://your-openai.openai.azure.com
@@ -755,7 +755,7 @@ az webapp config appsettings set \
   --settings \
     AZURE_SEARCH_ENDPOINT="https://your-search.search.windows.net" \
     AZURE_SEARCH_API_KEY="your-admin-key" \
-    AZURE_SEARCH_API_VERSION="2025-08-01-preview" \
+    AZURE_SEARCH_API_VERSION="2025-11-01-preview" \
     NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT="https://your-openai.openai.azure.com" \
     AZURE_OPENAI_API_KEY="your-key" \
     FOUNDRY_PROJECT_ENDPOINT="https://your-resource.services.ai.azure.com/api/projects/your-project" \
@@ -833,7 +833,7 @@ docker build -t knowledge-demo:latest .
 docker run -p 3000:3000 \
   -e AZURE_SEARCH_ENDPOINT="https://your-search.search.windows.net" \
   -e AZURE_SEARCH_API_KEY="your-key" \
-  -e AZURE_SEARCH_API_VERSION="2025-08-01-preview" \
+  -e AZURE_SEARCH_API_VERSION="2025-11-01-preview" \
   -e NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT="https://your-openai.openai.azure.com" \
   -e AZURE_OPENAI_API_KEY="your-key" \
   -e FOUNDRY_PROJECT_ENDPOINT="https://your-resource.services.ai.azure.com/api/projects/your-project" \
@@ -861,7 +861,7 @@ az container create \
   --ports 3000 \
   --environment-variables \
     AZURE_SEARCH_ENDPOINT="https://your-search.search.windows.net" \
-    AZURE_SEARCH_API_VERSION="2025-08-01-preview" \
+    AZURE_SEARCH_API_VERSION="2025-11-01-preview" \
     NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT="https://your-openai.openai.azure.com" \
     FOUNDRY_PROJECT_ENDPOINT="https://your-resource.services.ai.azure.com/api/projects/your-project" \
     AZURE_AUTH_METHOD="service-principal" \
@@ -1041,7 +1041,7 @@ az monitor app-insights component create \
 **Solutions**:
 - Verify `AZURE_SEARCH_ENDPOINT` and `AZURE_SEARCH_API_KEY`
 - Check Azure AI Search service is running: `az search service show --name YOUR_SERVICE --resource-group YOUR_RG`
-- Ensure API version `2025-08-01-preview` is set correctly
+- Ensure API version `2025-11-01-preview` is set correctly
 
 #### 3. Model not MCP compatible
 
@@ -1104,7 +1104,7 @@ Check browser console and terminal for detailed error messages.
 #### List Agents
 
 ```bash
-GET /agents?api-version=2025-08-01-preview
+GET /agents?api-version=2025-11-01-preview
 Headers:
   api-key: YOUR_ADMIN_KEY
 ```
@@ -1112,7 +1112,7 @@ Headers:
 #### Create Agent
 
 ```bash
-PUT /agents/{agentName}?api-version=2025-08-01-preview
+PUT /agents/{agentName}?api-version=2025-11-01-preview
 Headers:
   api-key: YOUR_ADMIN_KEY
   Content-Type: application/json
@@ -1149,7 +1149,7 @@ Body:
 #### Query Agent
 
 ```bash
-POST /agents/{agentName}/retrieve?api-version=2025-08-01-preview
+POST /agents/{agentName}/retrieve?api-version=2025-11-01-preview
 Headers:
   api-key: YOUR_ADMIN_KEY
   Content-Type: application/json
@@ -1194,7 +1194,7 @@ Body:
     {
       "type": "mcp",
       "server_label": "knowledge_base_1",
-      "server_url": "https://YOUR_SEARCH.search.windows.net/agents/my-agent/mcp?api-version=2025-08-01-preview",
+      "server_url": "https://YOUR_SEARCH.search.windows.net/agents/my-agent/mcp?api-version=2025-11-01-preview",
       "allowed_tools": ["knowledge_agent_retrieve"]
     }
   ]

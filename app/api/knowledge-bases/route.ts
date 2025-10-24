@@ -7,14 +7,24 @@ const API_VERSION = process.env.AZURE_SEARCH_API_VERSION
 export async function GET() {
   try {
     if (!ENDPOINT || !API_KEY || !API_VERSION) {
+      console.error('Missing environment variables:', {
+        hasEndpoint: !!ENDPOINT,
+        hasApiKey: !!API_KEY,
+        hasApiVersion: !!API_VERSION
+      })
       return NextResponse.json(
-        { error: 'Azure Search configuration missing' },
+        { error: 'Azure Search configuration missing', details: {
+          hasEndpoint: !!ENDPOINT,
+          hasApiKey: !!API_KEY,
+          hasApiVersion: !!API_VERSION
+        }},
         { status: 500 }
       )
     }
 
     const url = `${ENDPOINT}/knowledgeBases?api-version=${API_VERSION}`
-    
+    console.log('Fetching knowledge bases from:', url.replace(API_KEY, '***'))
+
     const response = await fetch(url, {
       headers: {
         'api-key': API_KEY,
@@ -24,8 +34,14 @@ export async function GET() {
     })
 
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Knowledge bases API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      })
       return NextResponse.json(
-        { error: 'Failed to fetch knowledge bases' },
+        { error: 'Failed to fetch knowledge bases', status: response.status, details: errorText },
         { status: response.status }
       )
     }
